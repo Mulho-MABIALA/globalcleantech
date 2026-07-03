@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: globalcleantech-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: globalcleantech-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: FRONTEND_URL
+        sync: false # URL Netlify, ex: https://globalcleantech.netlify.app
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: MAIL_FROM
+        value: "Global Clean Tech <contact@globalcleantech.sn>"
+      - key: MAIL_ADMIN
+        value: contact@globalcleantech.sn
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: MAX_FILE_SIZE_MB
+        value: "5"
+
+databases:
+  - name: globalcleantech-db
+    plan: free
