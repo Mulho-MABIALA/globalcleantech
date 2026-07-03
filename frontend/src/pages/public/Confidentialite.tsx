@@ -87,7 +87,7 @@ export default function Confidentialite() {
             Le responsable du traitement des données est <strong>Global Clean Tech</strong>,
             Quartier Médina Fall, Thiès, Sénégal —{' '}
             <a href="mailto:contact@globalcleantech.sn" className="text-primary hover:underline">contact@globalcleantech.sn</a> —{' '}
-            <a href="tel:+221770000000" className="text-primary hover:underline">+221 77 000 00 00</a>.
+            <a href="tel:+221756422600" className="text-primary hover:underline">+221 75 642 26 00</a>.
           </p>
         </Section>
 

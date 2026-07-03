@@ -49,7 +49,7 @@ export default function MentionsLegales() {
           <ul className="space-y-1.5">
             <li><strong>Dénomination :</strong> Global Clean Tech</li>
             <li><strong>Adresse :</strong> Quartier Médina Fall, Thiès, Sénégal</li>
-            <li><strong>Téléphone :</strong> <a href="tel:+221770000000" className="text-primary hover:underline">+221 77 000 00 00</a></li>
+            <li><strong>Téléphone :</strong> <a href="tel:+221756422600" className="text-primary hover:underline">+221 75 642 26 00</a> · <a href="tel:+221773501825" className="text-primary hover:underline">+221 77 350 18 25</a></li>
             <li><strong>Email :</strong> <a href="mailto:contact@globalcleantech.sn" className="text-primary hover:underline">contact@globalcleantech.sn</a></li>
           </ul>
         </Section>

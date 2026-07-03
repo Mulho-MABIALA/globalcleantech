@@ -178,7 +178,7 @@ export default function PostulerPage() {
                 <div>
                   <label className="form-label">Téléphone <span className="text-red-500">*</span></label>
                   <input type="tel" className={`form-input ${errors.telephone ? 'border-red-400' : ''}`}
-                    placeholder="77 000 00 00"
+                    placeholder="7X XXX XX XX"
                     {...register('telephone', { required: 'Téléphone requis', pattern: { value: /^[\d\s+\-()]{8,}$/, message: 'Numéro invalide' } })} />
                   {errors.telephone && <p className="text-red-500 text-xs mt-1">{errors.telephone.message}</p>}
                 </div>
