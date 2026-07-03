@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Proxy des appels API vers le backend Render (evite le CORS)
+[[redirects]]
+  from = "/api/*"
+  to = "https://globalcleantech-api.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Fallback SPA : React Router gere les routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
