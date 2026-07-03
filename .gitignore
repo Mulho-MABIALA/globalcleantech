@@ -1,0 +1,22 @@
+# Dépendances
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Secrets — ne jamais commiter
+.env
+.env.local
+*.env.backup
+# .env.production frontend est OK (variables VITE_ publiques uniquement)
+!frontend/.env.production
+backend/.env*
+
+# Fichiers uploadés par les utilisateurs (données personnelles !)
+backend/uploads/
+
+# Divers
+*.log
+.DS_Store
+Thumbs.db

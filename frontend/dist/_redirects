@@ -1,5 +1,0 @@
-# Proxy des appels API vers le backend Render — REMPLACEZ l'URL par celle de votre service Render
-/api/*  https://VOTRE-BACKEND.onrender.com/api/:splat  200
-
-# Fallback SPA : toutes les routes servent index.html (React Router gère le reste)
-/*  /index.html  200
