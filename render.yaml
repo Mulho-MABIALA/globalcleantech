@@ -4,7 +4,8 @@ services:
     runtime: node
     rootDir: backend
     plan: free
-    buildCommand: npm install && npm run build
+    # --include=dev : NODE_ENV=production ferait sauter typescript/prisma (devDependencies) → tsc introuvable (exit 127)
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     envVars:
