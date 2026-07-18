@@ -49,7 +49,7 @@ export function usePushNotifications() {
       if (!sub) {
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(data.publicKey),
+          applicationServerKey: urlBase64ToUint8Array(data.publicKey) as BufferSource,
         })
       }
 
