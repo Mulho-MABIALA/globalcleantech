@@ -175,8 +175,8 @@ export default function Footer() {
               <div className="mt-6 p-4 bg-white/[0.06] rounded-xl border border-white/10">
                 <p className="text-[11px] font-bold text-emerald-300/80 uppercase tracking-widest mb-2.5">Horaires</p>
                 <div className="space-y-1.5 text-sm text-gray-300">
-                  <div className="flex justify-between"><span>Lun – Ven</span><span className="text-white font-medium">8h – 18h</span></div>
-                  <div className="flex justify-between"><span>Samedi</span><span className="text-white font-medium">9h – 14h</span></div>
+                  <div className="flex justify-between"><span>Lun – Ven</span><span className="text-white font-medium">9h – 18h</span></div>
+                  <div className="flex justify-between"><span>Samedi</span><span className="text-white font-medium">10h – 17h</span></div>
                   <div className="flex justify-between"><span>Dimanche</span><span className="text-gray-500">Fermé</span></div>
                 </div>
               </div>

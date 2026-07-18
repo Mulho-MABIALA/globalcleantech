@@ -205,7 +205,7 @@ export default function ContactPage() {
                 </li>
                 <li className="flex items-center gap-3">
                   <svg className="w-4 h-4 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  <span>Lun–Sam, 8h–18h</span>
+                  <span>Lun–Ven, 9h–18h · Sam, 10h–17h</span>
                 </li>
               </ul>
             </div>
