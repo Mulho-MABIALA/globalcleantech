@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { sendMessageAdminMail } from '../services/mail.service'
+import { sendMessageAdminMail, newsletterToken } from '../services/mail.service'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -48,6 +48,32 @@ router.post('/newsletter', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Erreur serveur.' })
+  }
+})
+
+// GET /api/public/newsletter/unsubscribe?email=...&token=... — désinscription en un clic
+router.get('/newsletter/unsubscribe', async (req: Request, res: Response) => {
+  const { email, token } = req.query as { email?: string; token?: string }
+  const page = (titre: string, texte: string) => `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${titre} — Global Clean Tech</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;background:#f2f4f3;margin:0;padding:60px 20px;text-align:center">
+  <div style="max-width:480px;margin:auto;background:#fff;border-radius:12px;padding:40px 28px;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+    <h2 style="color:#1A7F4B;margin-top:0">${titre}</h2>
+    <p style="color:#444;line-height:1.6">${texte}</p>
+  </div>
+</body></html>`
+
+  if (!email || !token || token !== newsletterToken(email)) {
+    res.status(400).send(page('Lien invalide', 'Ce lien de désinscription est invalide ou expiré.'))
+    return
+  }
+  try {
+    await prisma.newsletterSubscriber.updateMany({ where: { email }, data: { actif: false } })
+    const safeEmail = email.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    res.send(page('Désinscription confirmée', `L'adresse <strong>${safeEmail}</strong> ne recevra plus la newsletter de Global Clean Tech.`))
+  } catch {
+    res.status(500).send(page('Erreur', 'Une erreur est survenue. Réessayez plus tard.'))
   }
 })
 

@@ -63,6 +63,15 @@ enum StatutMessage {
   archive
 }
 
+enum TypeNotification {
+  candidature
+  demande
+  message
+  candidature_statut
+  placement
+  systeme
+}
+
 model Actualite {
   id          Int      @id @default(autoincrement())
   titre       String   @db.VarChar(200)
@@ -91,14 +100,15 @@ model Service {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  name       String   @db.VarChar(100)
-  email      String   @unique @db.VarChar(150)
-  password   String
-  role       RoleUser @default(gestionnaire)
-  avatarPath String?  @db.VarChar(255)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                 Int                @id @default(autoincrement())
+  name               String             @db.VarChar(100)
+  email              String             @unique @db.VarChar(150)
+  password           String
+  role               RoleUser           @default(gestionnaire)
+  avatarPath         String?            @db.VarChar(255)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  pushSubscriptions  PushSubscription[]
 }
 
 model Candidature {
@@ -176,6 +186,27 @@ model SiteContent {
   cle       String   @unique @db.VarChar(100)
   valeur    String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        Int               @id @default(autoincrement())
+  type      TypeNotification
+  titre     String            @db.VarChar(200)
+  message   String            @db.Text
+  lien      String?           @db.VarChar(255)
+  lu        Boolean           @default(false)
+  createdAt DateTime          @default(now())
+}
+
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique @db.VarChar(500)
+  p256dh    String   @db.VarChar(255)
+  auth      String   @db.VarChar(255)
+  userAgent String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
 }
 
 model Demande {

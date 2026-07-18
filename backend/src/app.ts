@@ -14,6 +14,7 @@ import temoignageRoutes from './routes/temoignage.routes'
 import userRoutes from './routes/user.routes'
 import placementRoutes from './routes/placement.routes'
 import searchRoutes from './routes/search.routes'
+import notificationRoutes from './routes/notification.routes'
 import { authMiddleware } from './middlewares/auth.middleware'
 import { startCronJobs } from './cron/reminders'
 
@@ -29,6 +30,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
+  'https://globalcleantechsn.com',
+  'https://www.globalcleantechsn.com',
 ].map(normalizeOrigin)
 
 app.use(cors({
@@ -52,6 +55,7 @@ app.use('/api/temoignages', temoignageRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/placements', placementRoutes)
 app.use('/api/search', searchRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // Wildcard : les fichiers peuvent être dans des sous-dossiers (ex: candidatures/4/xxx.pdf)
 app.get('/api/uploads/*', authMiddleware, (req: Request, res: Response) => {
@@ -64,6 +68,20 @@ app.get('/api/uploads/*', authMiddleware, (req: Request, res: Response) => {
 })
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
+
+// ── Frontend statique (déploiement "même conteneur" : Docker/VPS) ─────────────
+// N'a aucun effet sur le déploiement Render/Netlify existant : le dossier
+// n'existe simplement pas dans ce cas, donc ce bloc est ignoré.
+const PUBLIC_DIR = process.env.FRONTEND_DIST_PATH || path.join(__dirname, '../public')
+if (fs.existsSync(PUBLIC_DIR)) {
+  app.use(express.static(PUBLIC_DIR))
+  // Fallback SPA : toute route non-API renvoie index.html (React Router prend le relais)
+  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/api')) { next(); return }
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'))
+  })
+  console.log(`🖥️  Frontend servi depuis ${PUBLIC_DIR}`)
+}
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err)

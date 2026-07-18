@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { getStats } from '../controllers/dashboard.controller'
 import { authMiddleware } from '../middlewares/auth.middleware'
+import { mailConfigured, sendNewsletterMail } from '../services/mail.service'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -130,13 +131,55 @@ router.get('/newsletter/export', async (_req: Request, res: Response) => {
     orderBy: { createdAt: 'desc' },
   })
   const BOM = '﻿'
-  const header = 'Email;Nom;Date inscription\n'
+  const header = 'Email;Date inscription\n'
   const rows = subs.map(s =>
-    `${s.email};${s.nom ?? ''};${new Date(s.createdAt).toLocaleDateString('fr-FR')}`
+    `${s.email};${new Date(s.createdAt).toLocaleDateString('fr-FR')}`
   ).join('\n')
   res.setHeader('Content-Type', 'text/csv; charset=utf-8')
   res.setHeader('Content-Disposition', 'attachment; filename="newsletter.csv"')
   res.send(BOM + header + rows)
+})
+
+// POST /api/dashboard/newsletter/send — envoyer une newsletter à tous les abonnés actifs
+router.post('/newsletter/send', async (req: Request, res: Response) => {
+  const { sujet, contenu } = req.body as { sujet?: string; contenu?: string }
+  if (!sujet?.trim() || !contenu?.trim()) {
+    res.status(400).json({ message: 'Sujet et contenu requis.' })
+    return
+  }
+  if (!mailConfigured()) {
+    res.status(503).json({ message: 'Envoi impossible : SMTP non configuré (MAIL_HOST/MAIL_USER/MAIL_PASS dans le .env du backend).' })
+    return
+  }
+
+  const subs = await prisma.newsletterSubscriber.findMany({
+    where: { actif: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  if (subs.length === 0) {
+    res.status(400).json({ message: 'Aucun abonné actif.' })
+    return
+  }
+
+  let envoyes = 0
+  const echecs: string[] = []
+  for (const s of subs) {
+    try {
+      await sendNewsletterMail(s.email, sujet.trim(), contenu.trim())
+      envoyes++
+    } catch (e) {
+      console.error(`[newsletter] Échec d'envoi à ${s.email}:`, e)
+      echecs.push(s.email)
+    }
+  }
+
+  res.json({
+    message: echecs.length === 0
+      ? `Newsletter envoyée à ${envoyes} abonné(s).`
+      : `Envoyée à ${envoyes} abonné(s), ${echecs.length} échec(s).`,
+    envoyes,
+    echecs,
+  })
 })
 
 // ── Actualités ───────────────────────────────────────────────────────────────

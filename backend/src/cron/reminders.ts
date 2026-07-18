@@ -10,9 +10,23 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
 })
 
-const FROM = process.env.MAIL_FROM || 'Global Clean Tech <contact@globalcleantech.sn>'
-const ADMIN = process.env.MAIL_ADMIN || 'contact@globalcleantech.sn'
+const FROM = process.env.MAIL_FROM || 'Global Clean Tech <contact@globalcleantechsn.com>'
+const ADMIN = process.env.MAIL_ADMIN || 'contact@globalcleantechsn.com'
 const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:5173'
+// Toujours l'URL publique de prod (indépendante de FRONTEND_URL, localhost en dev)
+const LOGO_URL = process.env.MAIL_LOGO_URL || 'https://globalcleantechsn.com/logo.png'
+const LOGO_HEADER = `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
+    <tr>
+      <td style="padding-right:10px;vertical-align:middle">
+        <img src="${LOGO_URL}" alt="Global Clean Tech" width="40" height="40" style="display:block;border-radius:8px" />
+      </td>
+      <td style="vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-weight:800;font-size:16px;color:#1A7F4B">
+        Global Clean Tech
+      </td>
+    </tr>
+  </table>
+`
 
 const POSTE_LABELS: Record<string, string> = {
   femme_menage: 'Femme de ménage', nounou: 'Nounou', cuisinier: 'Cuisinier(ère)',
@@ -52,6 +66,7 @@ export function startCronJobs() {
         subject: `[GCT] ⏰ Rappel — ${enAttente.length} candidature(s) en attente depuis +3 jours`,
         html: `
           <div style="font-family:sans-serif;max-width:700px">
+            ${LOGO_HEADER}
             <h2 style="color:#C8860A">⏰ Rappel — Candidatures en attente</h2>
             <p>${enAttente.length} candidature(s) sont en statut <strong>À traiter</strong> depuis plus de 3 jours.</p>
             <table style="border-collapse:collapse;width:100%">
@@ -107,6 +122,7 @@ export function startCronJobs() {
         subject: `[GCT] 📊 Rapport mensuel — ${moisLabel}`,
         html: `
           <div style="font-family:sans-serif;max-width:500px">
+            ${LOGO_HEADER}
             <h2 style="color:#1A7F4B">📊 Rapport mensuel — ${moisLabel}</h2>
             <table style="border-collapse:collapse;width:100%">
               <tr style="background:#f2f4f3"><td style="padding:12px;font-weight:bold">Nouvelles candidatures</td><td style="padding:12px;font-size:24px;font-weight:bold;color:#1A7F4B">${candidatures}</td></tr>

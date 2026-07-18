@@ -86,7 +86,7 @@ export default function Confidentialite() {
           <p>
             Le responsable du traitement des données est <strong>Global Clean Tech</strong>,
             Quartier Médina Fall, Thiès, Sénégal —{' '}
-            <a href="mailto:contact@globalcleantech.sn" className="text-primary hover:underline">contact@globalcleantech.sn</a> —{' '}
+            <a href="mailto:contact@globalcleantechsn.com" className="text-primary hover:underline">contact@globalcleantechsn.com</a> —{' '}
             <a href="tel:+221756422600" className="text-primary hover:underline">+221 75 642 26 00</a>.
           </p>
         </Section>
@@ -172,7 +172,7 @@ export default function Confidentialite() {
           </div>
           <p className="mt-4">
             Pour exercer ces droits, écrivez-nous à{' '}
-            <a href="mailto:contact@globalcleantech.sn" className="text-primary hover:underline">contact@globalcleantech.sn</a>{' '}
+            <a href="mailto:contact@globalcleantechsn.com" className="text-primary hover:underline">contact@globalcleantechsn.com</a>{' '}
             ou contactez-nous par WhatsApp. Nous répondons sous <strong>72 heures ouvrables</strong>.
             Vous pouvez également saisir la <strong>Commission de protection des Données Personnelles (CDP)</strong> du Sénégal.
           </p>

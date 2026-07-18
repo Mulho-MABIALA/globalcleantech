@@ -72,6 +72,26 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Téléphones — desktop uniquement, ne modifie pas la hauteur de la barre */}
+              <div className="hidden lg:flex items-center gap-3 mr-2">
+                {[
+                  { tel: '+221756422600', label: '75 642 26 00' },
+                  { tel: '+221773501825', label: '77 350 18 25' },
+                ].map((p) => (
+                  <a
+                    key={p.tel}
+                    href={`tel:${p.tel}`}
+                    className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                      scrolled ? 'text-muted hover:text-primary' : 'text-white/75 hover:text-white'
+                    }`}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    {p.label}
+                  </a>
+                ))}
+              </div>
               <Link
                 to="/postuler"
                 className={`hidden md:inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl transition-all duration-200 ${
@@ -161,6 +181,19 @@ export default function Navbar() {
             >
               Je cherche du personnel
             </a>
+            <div className="flex items-center justify-center gap-4 pt-3">
+              {[
+                { tel: '+221756422600', label: '75 642 26 00' },
+                { tel: '+221773501825', label: '77 350 18 25' },
+              ].map((p) => (
+                <a key={p.tel} href={`tel:${p.tel}`} className="flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  {p.label}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>

@@ -6,7 +6,6 @@ import toast from 'react-hot-toast'
 interface Subscriber {
   id: number
   email: string
-  nom: string | null
   actif: boolean
   createdAt: string
 }
@@ -19,6 +18,9 @@ interface NewsletterResponse {
 export default function Newsletter() {
   const [page, setPage] = useState(1)
   const [showInactif, setShowInactif] = useState(false)
+  const [showCompose, setShowCompose] = useState(false)
+  const [sujet, setSujet] = useState('')
+  const [contenu, setContenu] = useState('')
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery<NewsletterResponse>({
@@ -39,6 +41,26 @@ export default function Newsletter() {
     mutationFn: (id: number) => api.delete(`/dashboard/newsletter/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['newsletter'] }); toast.success('Supprimé.') },
   })
+
+  const sendMut = useMutation({
+    mutationFn: () => api.post('/dashboard/newsletter/send', { sujet, contenu }),
+    onSuccess: ({ data }) => {
+      toast.success(data.message)
+      setSujet(''); setContenu(''); setShowCompose(false)
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? "Échec de l'envoi.")
+    },
+  })
+
+  const handleSend = () => {
+    if (!sujet.trim() || !contenu.trim()) { toast.error('Sujet et contenu requis.'); return }
+    const total = data?.meta.total ?? 0
+    if (window.confirm(`Envoyer cette newsletter à ${total} abonné(s) actif(s) ?`)) {
+      sendMut.mutate()
+    }
+  }
 
   const exportCsv = () => {
     api.get('/dashboard/newsletter/export', { responseType: 'blob' }).then(res => {
@@ -65,8 +87,54 @@ export default function Newsletter() {
           <button onClick={exportCsv} className="btn-outline text-sm py-2">
             Export CSV
           </button>
+          <button onClick={() => setShowCompose(!showCompose)} className="btn-primary text-sm py-2">
+            {showCompose ? 'Fermer' : '✉️ Envoyer une newsletter'}
+          </button>
         </div>
       </div>
+
+      {showCompose && (
+        <div className="card space-y-4">
+          <div>
+            <h2 className="font-bold text-dark">Nouvelle newsletter</h2>
+            <p className="text-muted text-sm mt-0.5">
+              Sera envoyée à tous les abonnés actifs. Un lien de désinscription est ajouté automatiquement en bas de l'email.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="nl-sujet" className="form-label">Sujet *</label>
+            <input
+              id="nl-sujet"
+              type="text"
+              className="form-input"
+              placeholder="Ex : Nouveaux profils disponibles ce mois-ci"
+              value={sujet}
+              onChange={(e) => setSujet(e.target.value)}
+              maxLength={150}
+            />
+          </div>
+          <div>
+            <label htmlFor="nl-contenu" className="form-label">Contenu *</label>
+            <textarea
+              id="nl-contenu"
+              className="form-input min-h-[180px]"
+              placeholder={'Bonjour,\n\nVoici les actualités de Global Clean Tech...'}
+              value={contenu}
+              onChange={(e) => setContenu(e.target.value)}
+            />
+            <p className="text-xs text-muted mt-1">Les retours à la ligne sont conservés dans l'email.</p>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={handleSend}
+              disabled={sendMut.isPending}
+              className="btn-primary text-sm py-2 disabled:opacity-50"
+            >
+              {sendMut.isPending ? 'Envoi en cours…' : `Envoyer à ${data?.meta.total ?? 0} abonné(s)`}
+            </button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>
@@ -83,7 +151,6 @@ export default function Newsletter() {
               <thead>
                 <tr>
                   <th>Email</th>
-                  <th className="hidden sm:table-cell">Prénom</th>
                   <th className="hidden md:table-cell">Inscrit le</th>
                   <th>Statut</th>
                   <th />
@@ -93,7 +160,6 @@ export default function Newsletter() {
                 {data?.data.map((s) => (
                   <tr key={s.id}>
                     <td className="font-medium text-dark">{s.email}</td>
-                    <td className="text-muted hidden sm:table-cell">{s.nom ?? '—'}</td>
                     <td className="text-muted hidden md:table-cell whitespace-nowrap">
                       {new Date(s.createdAt).toLocaleDateString('fr-FR')}
                     </td>

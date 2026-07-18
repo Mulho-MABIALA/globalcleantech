@@ -30,9 +30,9 @@ services:
       - key: MAIL_PASS
         sync: false
       - key: MAIL_FROM
-        value: "Global Clean Tech <contact@globalcleantech.sn>"
+        value: "Global Clean Tech <contact@globalcleantechsn.com>"
       - key: MAIL_ADMIN
-        value: contact@globalcleantech.sn
+        value: contact@globalcleantechsn.com
       - key: UPLOAD_DIR
         value: uploads
       - key: MAX_FILE_SIZE_MB

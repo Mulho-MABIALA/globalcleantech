@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useCandidature, useUpdateCandidature, useDeleteCandidature } from '../../hooks/useCandidatures'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
+import EnvoyerAfficheModal from '../../components/dashboard/EnvoyerAfficheModal'
 import toast from 'react-hot-toast'
 import { POSTE_LABELS, EXPERIENCE_LABELS, STATUT_CANDIDATURE_LABELS } from '../../types/candidature'
 import { api } from '../../services/api'
@@ -17,6 +18,7 @@ export default function CandidatureDetail() {
   const [statut, setStatut] = useState('')
   const [notes, setNotes] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [afficheOpen, setAfficheOpen] = useState(false)
 
   React.useEffect(() => {
     if (c) {
@@ -50,19 +52,40 @@ export default function CandidatureDetail() {
     } catch { toast.error('Erreur.') }
   }
 
-  const downloadFile = (filePath: string) => {
+  const splitPath = (filePath: string) => {
     const parts = filePath.replace(/\\/g, '/').split('/')
-    if (parts.length < 2) return
-    const folder = parts.slice(0, -1).join('/')
-    const filename = parts[parts.length - 1]
-    api.get(`/uploads/${folder}/${filename}`, { responseType: 'blob' }).then((res) => {
-      const url = URL.createObjectURL(new Blob([res.data]))
+    if (parts.length < 2) return null
+    return { folder: parts.slice(0, -1).join('/'), filename: parts[parts.length - 1] }
+  }
+
+  const downloadFile = (filePath: string) => {
+    const p = splitPath(filePath)
+    if (!p) return
+    api.get(`/uploads/${p.folder}/${p.filename}`, { responseType: 'blob' }).then((res) => {
+      const url = URL.createObjectURL(res.data)
       const a = document.createElement('a')
       a.href = url
-      a.download = filename
+      a.download = p.filename
       a.click()
       URL.revokeObjectURL(url)
     }).catch(() => toast.error('Fichier introuvable.'))
+  }
+
+  // Les fichiers sont servis derrière l'auth (header Authorization), donc pas de
+  // lien direct : on ouvre un onglet vide tout de suite (pour éviter le blocage
+  // popup) puis on y charge le blob une fois récupéré.
+  const viewFile = (filePath: string) => {
+    const p = splitPath(filePath)
+    if (!p) return
+    const win = window.open('', '_blank')
+    api.get(`/uploads/${p.folder}/${p.filename}`, { responseType: 'blob' }).then((res) => {
+      const url = URL.createObjectURL(res.data)
+      if (win) win.location.href = url
+      else toast.error("Le navigateur a bloqué l'ouverture — autorisez les pop-ups pour ce site.")
+    }).catch(() => {
+      win?.close()
+      toast.error('Fichier introuvable.')
+    })
   }
 
   return (
@@ -81,7 +104,13 @@ export default function CandidatureDetail() {
             <span className="text-sm text-muted">{POSTE_LABELS[c.posteSouhaite]}</span>
           </div>
         </div>
-        <button onClick={() => setDeleteOpen(true)} className="text-red-500 text-sm hover:underline">Supprimer</button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setAfficheOpen(true)} className="flex items-center gap-2 text-primary text-sm font-medium hover:underline">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            Envoyer l'affiche par email
+          </button>
+          <button onClick={() => setDeleteOpen(true)} className="text-red-500 text-sm hover:underline">Supprimer</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -115,51 +144,38 @@ export default function CandidatureDetail() {
           {(c.cvPath || c.photoPath || c.cniRectoPath || c.cniVersoPath) && (
             <div className="card">
               <h2 className="font-semibold font-display text-dark mb-4">Fichiers</h2>
-              <div className="flex flex-wrap gap-3">
-                {c.cvPath && (
-                  <button
-                    onClick={() => downloadFile(c.cvPath!)}
-                    className="flex items-center gap-2 bg-primary-light text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary hover:text-white transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Télécharger CV
-                  </button>
-                )}
-                {c.photoPath && (
-                  <button
-                    onClick={() => downloadFile(c.photoPath!)}
-                    className="flex items-center gap-2 bg-surface text-dark px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Voir photo
-                  </button>
-                )}
-                {c.cniRectoPath && (
-                  <button
-                    onClick={() => downloadFile(c.cniRectoPath!)}
-                    className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    CNI / Passeport (recto)
-                  </button>
-                )}
-                {c.cniVersoPath && (
-                  <button
-                    onClick={() => downloadFile(c.cniVersoPath!)}
-                    className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    CNI / Passeport (verso)
-                  </button>
-                )}
+              <div className="space-y-2">
+                {[
+                  { path: c.cvPath, label: 'CV', color: 'bg-primary-light text-primary' },
+                  { path: c.photoPath, label: 'Photo', color: 'bg-surface text-dark' },
+                  { path: c.cniRectoPath, label: 'CNI / Passeport (recto)', color: 'bg-amber-50 text-amber-700' },
+                  { path: c.cniVersoPath, label: 'CNI / Passeport (verso)', color: 'bg-amber-50 text-amber-700' },
+                ].filter((f) => f.path).map((f) => (
+                  <div key={f.label} className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg ${f.color}`}>
+                    <span className="text-sm font-medium">{f.label}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => viewFile(f.path!)}
+                        className="flex items-center gap-1.5 bg-white/70 hover:bg-white px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Voir
+                      </button>
+                      <button
+                        onClick={() => downloadFile(f.path!)}
+                        className="flex items-center gap-1.5 bg-white/70 hover:bg-white px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Télécharger
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -206,6 +222,8 @@ export default function CandidatureDetail() {
           <button onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600">Supprimer</button>
         </div>
       </Modal>
+
+      <EnvoyerAfficheModal open={afficheOpen} onClose={() => setAfficheOpen(false)} candidature={c} />
     </div>
   )
 }

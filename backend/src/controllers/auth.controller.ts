@@ -3,11 +3,14 @@ import bcrypt from 'bcrypt'
 import path from 'path'
 import fs from 'fs'
 import { PrismaClient } from '@prisma/client'
+import { OAuth2Client } from 'google-auth-library'
 import { signToken } from '../utils/jwt'
 import { AuthRequest } from '../middlewares/auth.middleware'
 
 const prisma = new PrismaClient()
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
 
 const USER_SELECT = { id: true, name: true, email: true, role: true, avatarPath: true, createdAt: true, updatedAt: true }
 
@@ -40,6 +43,51 @@ export async function login(req: Request, res: Response) {
 
   const token = signToken({ id: user.id, role: user.role })
 
+  res.json({
+    token,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+  })
+}
+
+/**
+ * Connexion via Google Identity Services : le front envoie l'ID token obtenu
+ * après authentification Google, on le vérifie côté serveur puis on cherche
+ * un compte existant portant cet email. Aucune création automatique de compte :
+ * seuls les utilisateurs déjà créés par un admin (table User) peuvent se connecter.
+ */
+export async function loginWithGoogle(req: Request, res: Response) {
+  const { credential } = req.body as { credential?: string }
+
+  if (!credential) {
+    res.status(400).json({ message: 'Jeton Google manquant.' })
+    return
+  }
+  if (!googleClient || !GOOGLE_CLIENT_ID) {
+    res.status(503).json({ message: 'Connexion Google non configurée sur ce serveur.' })
+    return
+  }
+
+  let email: string | undefined
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID })
+    const payload = ticket.getPayload()
+    if (!payload?.email || !payload.email_verified) {
+      res.status(401).json({ message: 'Adresse email Google non vérifiée.' })
+      return
+    }
+    email = payload.email
+  } catch {
+    res.status(401).json({ message: 'Jeton Google invalide ou expiré.' })
+    return
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } })
+  if (!user) {
+    res.status(403).json({ message: "Aucun compte administrateur n'est associé à cette adresse Google." })
+    return
+  }
+
+  const token = signToken({ id: user.id, role: user.role })
   res.json({
     token,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },

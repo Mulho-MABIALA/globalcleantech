@@ -4,7 +4,17 @@ import fs from 'fs'
 import path from 'path'
 import { AuthRequest } from '../middlewares/auth.middleware'
 import { CandidatureSchema, UpdateCandidatureSchema } from '../schemas/candidature.schema'
-import { sendCandidatureAdminMail, sendStatutUpdateMail } from '../services/mail.service'
+import { sendCandidatureAdminMail, sendStatutUpdateMail, sendCandidatureAfficheMail } from '../services/mail.service'
+import { createNotification } from '../services/notification.service'
+
+const POSTE_LABELS: Record<string, string> = {
+  femme_menage: 'Femme de ménage', nounou: 'Nounou', cuisinier: 'Cuisinier(ère)',
+  chauffeur: 'Chauffeur', gardien: 'Gardien', majordome: 'Majordome', autre: 'Autre',
+}
+
+const STATUT_LABELS: Record<string, string> = {
+  a_traiter: 'À traiter', en_cours: 'En cours', place: 'Placé(e)', archive: 'Archivé(e)',
+}
 
 const prisma = new PrismaClient()
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
@@ -78,6 +88,13 @@ export async function createCandidature(req: AuthRequest, res: Response) {
     console.error('Email admin candidature non envoyé :', err)
   }
 
+  createNotification({
+    type: 'candidature',
+    titre: 'Nouvelle candidature',
+    message: `${candidature.nomComplet} — ${POSTE_LABELS[candidature.posteSouhaite] ?? candidature.posteSouhaite} (${candidature.ville})`,
+    lien: `/admin/candidatures/${candidature.id}`,
+  }).catch(() => {})
+
   res.status(201).json({ ...candidature, cvPath, photoPath, cniRectoPath, cniVersoPath })
 }
 
@@ -137,21 +154,74 @@ export async function updateCandidature(req: AuthRequest, res: Response) {
   const updated = await prisma.candidature.update({ where: { id }, data: parsed.data })
 
   // Notify candidate by email when status changes
-  if (parsed.data.statut && prev && parsed.data.statut !== prev.statut && updated.email) {
-    const postes: Record<string, string> = {
-      femme_menage: 'Femme de ménage', nounou: 'Nounou', cuisinier: 'Cuisinier(ère)',
-      chauffeur: 'Chauffeur', gardien: 'Gardien', majordome: 'Majordome', autre: 'Autre',
+  if (parsed.data.statut && prev && parsed.data.statut !== prev.statut) {
+    if (updated.email) {
+      sendStatutUpdateMail({
+        email: updated.email,
+        nom: updated.nomComplet,
+        statut: updated.statut,
+        poste: POSTE_LABELS[updated.posteSouhaite] ?? updated.posteSouhaite,
+        id: updated.id,
+      }).catch(() => {})
     }
-    sendStatutUpdateMail({
-      email: updated.email,
-      nom: updated.nomComplet,
-      statut: updated.statut,
-      poste: postes[updated.posteSouhaite] ?? updated.posteSouhaite,
-      id: updated.id,
+
+    // Notification interne + push pour l'équipe (visibilité sur les changements de statut)
+    createNotification({
+      type: 'candidature_statut',
+      titre: 'Statut de candidature modifié',
+      message: `${updated.nomComplet} → ${STATUT_LABELS[updated.statut] ?? updated.statut}`,
+      lien: `/admin/candidatures/${updated.id}`,
     }).catch(() => {})
   }
 
   res.json(updated)
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * Reçoit l'affiche générée côté frontend (PNG en dataURL, signée par
+ * l'administrateur) et l'envoie par email au destinataire choisi
+ * (candidat ou client).
+ */
+export async function sendCandidatureAffiche(req: AuthRequest, res: Response) {
+  const id = parseInt(req.params.id)
+  const { email, image } = req.body as { email?: string; image?: string }
+
+  if (!email || !EMAIL_RE.test(email)) {
+    res.status(400).json({ message: 'Adresse email destinataire invalide.' })
+    return
+  }
+  if (!image || !image.startsWith('data:image/')) {
+    res.status(400).json({ message: 'Image invalide.' })
+    return
+  }
+
+  const candidature = await prisma.candidature.findUnique({ where: { id } })
+  if (!candidature) {
+    res.status(404).json({ message: 'Candidature introuvable.' })
+    return
+  }
+
+  const base64 = image.split(',')[1] || ''
+  const imageBuffer = Buffer.from(base64, 'base64')
+  if (imageBuffer.length === 0) {
+    res.status(400).json({ message: 'Image invalide.' })
+    return
+  }
+
+  try {
+    await sendCandidatureAfficheMail({
+      to: email,
+      nomComplet: candidature.nomComplet,
+      poste: POSTE_LABELS[candidature.posteSouhaite] ?? candidature.posteSouhaite,
+      imageBuffer,
+    })
+    res.json({ message: 'Affiche envoyée par email.' })
+  } catch (err) {
+    console.error("Erreur envoi de l'affiche :", err)
+    res.status(502).json({ message: "Échec de l'envoi de l'email (SMTP non configuré ou indisponible)." })
+  }
 }
 
 export async function deleteCandidature(req: AuthRequest, res: Response) {

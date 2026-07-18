@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import { authMiddleware, requireAdmin } from '../middlewares/auth.middleware'
 import { sendMessageAdminMail } from '../services/mail.service'
+import { createNotification } from '../services/notification.service'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -23,8 +24,14 @@ router.post('/', async (req: Request, res: Response) => {
     return
   }
   const msg = await prisma.message.create({ data: parsed.data })
-  // Notification email async (ne bloque pas la réponse)
+  // Notification email + push async (ne bloque pas la réponse)
   sendMessageAdminMail(msg).catch(e => console.error('Mail message:', e))
+  createNotification({
+    type: 'message',
+    titre: 'Nouveau message de contact',
+    message: `${msg.nom} — ${msg.sujet}`,
+    lien: `/admin/messages/${msg.id}`,
+  }).catch(() => {})
   res.status(201).json({ message: 'Message envoyé.', id: msg.id })
 })
 

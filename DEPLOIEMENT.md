@@ -88,3 +88,4 @@ Puis glissez le dossier `frontend/dist` sur Netlify (Deploys → drag & drop).
    Pour la production réelle : ajoutez un disque persistant Render (payant, pointez `UPLOAD_DIR` dessus) ou un stockage externe (Cloudinary/S3).
 3. **Base PostgreSQL Free** : expire après 30 jours sur Render (sauvegardez ou passez au plan payant pour le client).
 4. **Emails** : sans `MAIL_USER`/`MAIL_PASS`, les notifications (nouvelle candidature, changement de statut) ne partent pas — le site fonctionne quand même.
+5. **Notifications push** : sans `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (générées avec `npx web-push generate-vapid-keys`), le push navigateur est désactivé mais la cloche de notifications du dashboard continue de fonctionner normalement.

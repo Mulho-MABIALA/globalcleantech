@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client'
 import { AuthRequest } from '../middlewares/auth.middleware'
 import { DemandeSchema, UpdateDemandeSchema } from '../schemas/demande.schema'
 import { sendDemandeAdminMail, sendDemandeConfirmationMail } from '../services/mail.service'
+import { createNotification } from '../services/notification.service'
 
 const prisma = new PrismaClient()
 
@@ -58,6 +59,13 @@ export async function createDemande(req: Request, res: Response) {
   } catch (err) {
     console.error('Email demande non envoyé :', err)
   }
+
+  createNotification({
+    type: 'demande',
+    titre: 'Nouvelle demande client',
+    message: `${demande.nomRaisonSociale} — ${services[demande.serviceSouhaite] || demande.serviceSouhaite}`,
+    lien: `/admin/demandes/${demande.id}`,
+  }).catch(() => {})
 
   res.status(201).json(demande)
 }

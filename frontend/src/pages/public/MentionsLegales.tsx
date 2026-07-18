@@ -50,7 +50,7 @@ export default function MentionsLegales() {
             <li><strong>Dénomination :</strong> Global Clean Tech</li>
             <li><strong>Adresse :</strong> Quartier Médina Fall, Thiès, Sénégal</li>
             <li><strong>Téléphone :</strong> <a href="tel:+221756422600" className="text-primary hover:underline">+221 75 642 26 00</a> · <a href="tel:+221773501825" className="text-primary hover:underline">+221 77 350 18 25</a></li>
-            <li><strong>Email :</strong> <a href="mailto:contact@globalcleantech.sn" className="text-primary hover:underline">contact@globalcleantech.sn</a></li>
+            <li><strong>Email :</strong> <a href="mailto:contact@globalcleantechsn.com" className="text-primary hover:underline">contact@globalcleantechsn.com</a></li>
           </ul>
         </Section>
 
@@ -65,7 +65,7 @@ export default function MentionsLegales() {
           <p>
             Le site et ses données sont hébergés sur des serveurs sécurisés. Pour toute question
             relative à l'hébergement, contactez-nous à l'adresse{' '}
-            <a href="mailto:contact@globalcleantech.sn" className="text-primary hover:underline">contact@globalcleantech.sn</a>.
+            <a href="mailto:contact@globalcleantechsn.com" className="text-primary hover:underline">contact@globalcleantechsn.com</a>.
           </p>
         </Section>
 

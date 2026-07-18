@@ -7,6 +7,7 @@ import {
   deleteCandidature,
   exportCandidaturesCsv,
   serveUpload,
+  sendCandidatureAffiche,
 } from '../controllers/candidature.controller'
 import { authMiddleware } from '../middlewares/auth.middleware'
 import { uploadCandidature } from '../middlewares/upload.middleware'
@@ -21,6 +22,7 @@ router.get('/', listCandidatures)
 router.get('/:id', getCandidature)
 router.patch('/:id', updateCandidature)
 router.delete('/:id', deleteCandidature)
+router.post('/:id/affiche', sendCandidatureAffiche)
 
 router.get('/uploads/:folder/:filename', serveUpload)
 

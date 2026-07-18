@@ -1,7 +1,22 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, setToken } from '../../services/api'
 import toast from 'react-hot-toast'
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: Record<string, unknown>) => void
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void
+        }
+      }
+    }
+  }
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
 export default function Login() {
   const navigate = useNavigate()
@@ -9,6 +24,49 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPwd, setShowPwd] = useState(false)
+  const googleBtnRef = useRef<HTMLDivElement>(null)
+
+  const goToDashboard = () => navigate('/admin/dashboard', { replace: true })
+
+  const handleGoogleCredential = async (response: { credential: string }) => {
+    try {
+      const { data } = await api.post('/auth/google', { credential: response.credential })
+      setToken(data.token)
+      goToDashboard()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg || 'Connexion Google impossible.')
+    }
+  }
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return
+    const scriptId = 'google-identity-services'
+
+    const render = () => {
+      if (!window.google || !googleBtnRef.current) return
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      })
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline', size: 'large', width: 320, text: 'signin_with', locale: 'fr',
+      })
+    }
+
+    if (document.getElementById(scriptId)) {
+      render()
+      return
+    }
+    const script = document.createElement('script')
+    script.id = scriptId
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = render
+    document.head.appendChild(script)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -16,7 +74,7 @@ export default function Login() {
     try {
       const { data } = await api.post('/auth/login', { email, password })
       setToken(data.token)
-      navigate('/admin/dashboard', { replace: true })
+      goToDashboard()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       toast.error(msg || 'Identifiants incorrects.')
@@ -36,7 +94,19 @@ export default function Login() {
           <p className="text-muted text-sm mt-1">Administration — Connexion</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-4">
+        <div className="card space-y-4">
+          {GOOGLE_CLIENT_ID && (
+            <>
+              <div className="flex justify-center" ref={googleBtnRef} />
+              <div className="flex items-center gap-3 text-xs text-muted">
+                <span className="flex-1 h-px bg-gray-200" />
+                <span>ou avec votre email</span>
+                <span className="flex-1 h-px bg-gray-200" />
+              </div>
+            </>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="form-label" htmlFor="email">Adresse email</label>
             <input
@@ -85,7 +155,8 @@ export default function Login() {
           <button type="submit" disabled={loading} className="btn-primary w-full py-3">
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
-        </form>
+          </form>
+        </div>
 
         <p className="text-center text-xs text-muted mt-6">
           <a href="/" className="hover:text-primary transition-colors">← Retour au site</a>

@@ -4,6 +4,7 @@ import { removeToken, api } from '../services/api'
 import { useMessageStats } from '../hooks/useMessages'
 import { useMe, useAvatarUrl } from '../hooks/useMe'
 import WhatsAppButton from '../components/layout/WhatsAppButton'
+import NotificationBell from '../components/layout/NotificationBell'
 
 const NAV_GROUPS = [
   {
@@ -307,6 +308,7 @@ export default function DashboardLayout() {
             <GlobalSearch />
           </div>
           <div className="lg:hidden flex-1" />
+          <NotificationBell />
           <Link to="/admin/profil" title="Mon profil" className="flex items-center gap-2 p-1.5 lg:pr-3 rounded-full hover:bg-gray-100 text-gray-600 transition-colors">
             <span className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary shrink-0">
               {avatarUrl ? (
