@@ -1,0 +1,14 @@
+Objet : VPS-Basic (ID 2086) actif mais aucune machine virtuelle associée
+
+Bonjour,
+
+J'ai commandé le service Jokko Cloud - VPS-Basic (ID produit : 2086), payé par Wave, actif depuis le 16 juillet 2026.
+
+Sur la page "Info-produit" de ce service, j'ai le message suivant : "Non associated virtual machine — This service currently has no virtual machine linked."
+
+Pourriez-vous provisionner/activer la machine virtuelle associée à ce service et me communiquer les accès de connexion (adresse IP, identifiant, mot de passe root/SSH) ?
+
+Merci d'avance pour votre retour rapide.
+
+Cordialement,
+Mulho Mabiala
