@@ -115,7 +115,6 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="form-input"
-              placeholder="admin@globalcleantech.sn"
               required
               autoComplete="email"
             />
