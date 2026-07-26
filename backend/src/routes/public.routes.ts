@@ -14,14 +14,14 @@ router.get('/stats', async (_req: Request, res: Response) => {
       prisma.candidature.count(),
     ])
     res.json({
-      placements: placements || 500,
-      clients: clients || 150,
+      placements,
+      clients,
       candidats: totalCandidats,
       services: 6,
       annees: new Date().getFullYear() - 2019,
     })
   } catch {
-    res.json({ placements: 500, clients: 150, candidats: 0, services: 6, annees: 5 })
+    res.json({ placements: 0, clients: 0, candidats: 0, services: 6, annees: 5 })
   }
 })
 

@@ -33,6 +33,24 @@ async function main() {
     })
   }
   console.log('Témoignages seedés :', temoignages.length)
+
+  const services = [
+    { id: 1, titre: 'Placement de personnel', description: 'Femmes de ménage, nounous, cuisiniers, chauffeurs, gardiens, majordomes. Profils vérifiés et formés.', emoji: 'users', couleur: 'emerald', tags: 'Maison,Bureau,Entreprise', ordre: 1, actif: true },
+    { id: 2, titre: 'Communication & Journalisme', description: 'Rédaction de contenu, relations presse, communication digitale et institutionnelle.', emoji: 'megaphone', couleur: 'blue', tags: 'Presse,Digital,RP', ordre: 2, actif: true },
+    { id: 3, titre: 'Impression & Numérisation', description: 'Photocopie couleur et N&B, numérisation de documents, reliure, plastification.', emoji: 'printer', couleur: 'purple', tags: 'A4 / A3,Couleur,Numérique', ordre: 3, actif: true },
+    { id: 4, titre: "Transfert d'argent", description: "Envoi et réception d'argent rapides et sécurisés pour particuliers et entreprises.", emoji: 'money', couleur: 'amber', tags: 'Rapide,Sécurisé,Fiable', ordre: 4, actif: true },
+    { id: 5, titre: 'Services administratifs', description: 'Assistance aux démarches, rédaction de courriers, légalisation et certification de documents.', emoji: 'clipboard', couleur: 'rose', tags: 'Démarches,Courriers,Légalisation', ordre: 5, actif: true },
+    { id: 6, titre: 'Sur mesure', description: 'Un besoin spécifique ? Nous construisons ensemble la solution adaptée.', emoji: 'star', couleur: 'teal', tags: 'Personnalisé,Flexible,Tout besoin', ordre: 6, actif: true },
+  ]
+
+  for (const s of services) {
+    await prisma.service.upsert({
+      where: { id: s.id },
+      update: {},
+      create: s,
+    })
+  }
+  console.log('Services seedés :', services.length)
 }
 
 main()

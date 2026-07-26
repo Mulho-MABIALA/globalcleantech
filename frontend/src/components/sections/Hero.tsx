@@ -52,9 +52,7 @@ export default function Hero() {
   const [transitioning, setTransitioning] = useState(false)
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
-  const placements = stats ? Math.max(stats.placements, 500) : 500
-  const clients    = stats ? Math.max(stats.clients, 150) : 150
-  const annees     = stats?.annees ?? 5
+  const placements = stats?.placements ?? 0
 
   // Auto-advance
   useEffect(() => {
@@ -194,25 +192,11 @@ export default function Hero() {
 
       {/* ── Barre stats ── */}
       <div className="relative z-10 border-t border-white/10 bg-black/30 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-12 lg:px-20 py-4 sm:py-5 grid grid-cols-3 gap-2 sm:gap-4 text-center divide-x divide-white/10">
-          <div>
-            <p className="text-xl sm:text-2xl font-black text-white font-display">
-              <CountUp target={placements} suffix="+" />
-            </p>
-            <p className="text-[11px] text-white/35 mt-0.5 font-medium">Placements réalisés</p>
-          </div>
-          <div>
-            <p className="text-xl sm:text-2xl font-black text-white font-display">
-              <CountUp target={clients} suffix="+" />
-            </p>
-            <p className="text-[11px] text-white/35 mt-0.5 font-medium">Clients satisfaits</p>
-          </div>
-          <div>
-            <p className="text-xl sm:text-2xl font-black text-white font-display">
-              <CountUp target={annees} suffix="+ ans" />
-            </p>
-            <p className="text-[11px] text-white/35 mt-0.5 font-medium">D'expérience</p>
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-12 lg:px-20 py-4 sm:py-5 text-center">
+          <p className="text-xl sm:text-2xl font-black text-white font-display">
+            <CountUp target={placements} suffix="+" />
+          </p>
+          <p className="text-[11px] text-white/35 mt-0.5 font-medium">Placements réalisés</p>
         </div>
       </div>
 
