@@ -25,6 +25,7 @@ export interface Candidature {
   photoPath?: string | null
   cniRectoPath?: string | null
   cniVersoPath?: string | null
+  permisPath?: string | null
   disponibilite: string
   statut: StatutCandidature
   notesInternes?: string | null

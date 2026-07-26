@@ -63,7 +63,7 @@ export const uploadCandidature = multer({
   fileFilter: (req, file, cb) => {
     if (file.fieldname === 'cv') cvFilter(req, file, cb)
     else if (file.fieldname === 'photo') photoFilter(req, file, cb)
-    else if (file.fieldname === 'cniRecto' || file.fieldname === 'cniVerso') cniFilter(req, file, cb)
+    else if (file.fieldname === 'cniRecto' || file.fieldname === 'cniVerso' || file.fieldname === 'permis') cniFilter(req, file, cb)
     else cb(null, false)
   },
 }).fields([
@@ -71,4 +71,5 @@ export const uploadCandidature = multer({
   { name: 'photo', maxCount: 1 },
   { name: 'cniRecto', maxCount: 1 },
   { name: 'cniVerso', maxCount: 1 },
+  { name: 'permis', maxCount: 1 },
 ])

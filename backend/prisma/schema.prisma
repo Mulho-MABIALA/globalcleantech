@@ -125,6 +125,7 @@ model Candidature {
   photoPath         String?           @db.VarChar(255)
   cniRectoPath      String?           @db.VarChar(255)
   cniVersoPath      String?           @db.VarChar(255)
+  permisPath        String?           @db.VarChar(255)
   disponibilite     String            @db.VarChar(100)
   dateDisponibilite DateTime?         @db.Date
   statut            StatutCandidature @default(a_traiter)

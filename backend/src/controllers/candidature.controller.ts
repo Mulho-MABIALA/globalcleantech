@@ -50,6 +50,7 @@ export async function createCandidature(req: AuthRequest, res: Response) {
   let photoPath: string | null = null
   let cniRectoPath: string | null = null
   let cniVersoPath: string | null = null
+  let permisPath: string | null = null
 
   if (files) {
     const destDir = path.join(UPLOAD_DIR, 'candidatures', String(candidature.id))
@@ -65,11 +66,12 @@ export async function createCandidature(req: AuthRequest, res: Response) {
     if (files.photo?.[0]) photoPath = saveFile(files.photo[0])
     if (files.cniRecto?.[0]) cniRectoPath = saveFile(files.cniRecto[0])
     if (files.cniVerso?.[0]) cniVersoPath = saveFile(files.cniVerso[0])
+    if (files.permis?.[0]) permisPath = saveFile(files.permis[0])
 
-    if (cvPath || photoPath || cniRectoPath || cniVersoPath) {
+    if (cvPath || photoPath || cniRectoPath || cniVersoPath || permisPath) {
       await prisma.candidature.update({
         where: { id: candidature.id },
-        data: { cvPath, photoPath, cniRectoPath, cniVersoPath },
+        data: { cvPath, photoPath, cniRectoPath, cniVersoPath, permisPath },
       })
     }
   }
@@ -95,7 +97,7 @@ export async function createCandidature(req: AuthRequest, res: Response) {
     lien: `/admin/candidatures/${candidature.id}`,
   }).catch(() => {})
 
-  res.status(201).json({ ...candidature, cvPath, photoPath, cniRectoPath, cniVersoPath })
+  res.status(201).json({ ...candidature, cvPath, photoPath, cniRectoPath, cniVersoPath, permisPath })
 }
 
 export async function listCandidatures(req: AuthRequest, res: Response) {

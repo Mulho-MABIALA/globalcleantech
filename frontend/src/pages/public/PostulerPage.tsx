@@ -20,7 +20,7 @@ interface FormData {
   photo?: FileList
   cniRecto?: FileList
   cniVerso?: FileList
-  _hp?: string
+  permis?: FileList
 }
 
 const POSTES = Object.entries(POSTE_LABELS) as [PosteSouhaite, string][]
@@ -60,7 +60,6 @@ export default function PostulerPage() {
   }
 
   const onSubmit = async (data: FormData) => {
-    if (data._hp) return
     setLoading(true)
     setError('')
     try {
@@ -80,6 +79,7 @@ export default function PostulerPage() {
       if (data.photo?.[0]) fd.append('photo', data.photo[0])
       if (data.cniRecto?.[0]) fd.append('cniRecto', data.cniRecto[0])
       if (data.cniVerso?.[0]) fd.append('cniVerso', data.cniVerso[0])
+      if (data.permis?.[0]) fd.append('permis', data.permis[0])
       await api.post('/candidatures', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setSubmitted(true)
     } catch (e: unknown) {
@@ -145,11 +145,6 @@ export default function PostulerPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-10">
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          {/* Honeypot */}
-          <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }}>
-            <input tabIndex={-1} autoComplete="off" {...register('_hp')} />
-          </div>
-
           {/* Étape 1 — Identité */}
           {step === 1 && (
             <div className="space-y-6 animate-fade-in">
@@ -326,6 +321,30 @@ export default function PostulerPage() {
                   </label>
                 </div>
               </div>
+
+              {/* Permis de conduire — uniquement pour le poste de chauffeur */}
+              {poste === 'chauffeur' && (
+                <div className="mb-4">
+                  <label className="form-label">
+                    Permis de conduire <span className="text-red-500">*</span>
+                    <span className="text-gray-400 font-normal ml-1">(obligatoire pour le poste de chauffeur)</span>
+                  </label>
+                  <label className={`flex flex-col items-center gap-2 p-5 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group ${errors.permis ? 'border-red-400' : 'border-gray-300'}`}>
+                    <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <svg className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-dark">{watch('permis')?.[0]?.name ?? 'Choisir le permis de conduire'}</p>
+                      <p className="text-xs text-muted">JPG, PNG, PDF · max 5 Mo</p>
+                    </div>
+                    <input type="file" accept="image/*,.pdf" className="sr-only"
+                      {...register('permis', { required: poste === 'chauffeur' ? 'Le permis de conduire est requis pour ce poste' : false })} />
+                  </label>
+                  {errors.permis && <p className="text-red-500 text-xs mt-1">{errors.permis.message}</p>}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
