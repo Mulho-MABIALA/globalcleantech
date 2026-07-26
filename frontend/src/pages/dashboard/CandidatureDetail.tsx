@@ -7,6 +7,7 @@ import EnvoyerAfficheModal from '../../components/dashboard/EnvoyerAfficheModal'
 import toast from 'react-hot-toast'
 import { POSTE_LABELS, EXPERIENCE_LABELS, STATUT_CANDIDATURE_LABELS } from '../../types/candidature'
 import { api } from '../../services/api'
+import { useAvatarUrl } from '../../hooks/useMe'
 
 export default function CandidatureDetail() {
   const { id } = useParams<{ id: string }>()
@@ -19,6 +20,7 @@ export default function CandidatureDetail() {
   const [notes, setNotes] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [afficheOpen, setAfficheOpen] = useState(false)
+  const photoUrl = useAvatarUrl(c?.photoPath)
 
   React.useEffect(() => {
     if (c) {
@@ -97,11 +99,20 @@ export default function CandidatureDetail() {
       </div>
 
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-dark">{c.nomComplet}</h1>
-          <div className="flex items-center gap-3 mt-1">
-            <Badge status={c.statut} />
-            <span className="text-sm text-muted">{POSTE_LABELS[c.posteSouhaite]}</span>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden bg-primary-light flex items-center justify-center shrink-0 border border-gray-100">
+            {photoUrl ? (
+              <img src={photoUrl} alt={c.nomComplet} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-primary font-bold text-xl">{c.nomComplet.trim()[0]?.toUpperCase() || '?'}</span>
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold font-display text-dark">{c.nomComplet}</h1>
+            <div className="flex items-center gap-3 mt-1">
+              <Badge status={c.statut} />
+              <span className="text-sm text-muted">{POSTE_LABELS[c.posteSouhaite]}</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-4">

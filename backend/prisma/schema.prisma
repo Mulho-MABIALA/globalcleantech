@@ -68,6 +68,7 @@ enum TypeNotification {
   demande
   message
   candidature_statut
+  demande_statut
   placement
   systeme
 }

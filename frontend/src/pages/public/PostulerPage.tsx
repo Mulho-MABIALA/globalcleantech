@@ -282,18 +282,18 @@ export default function PostulerPage() {
             <div className="space-y-6 animate-fade-in">
               <div className="mb-8">
                 <h2 className="text-xl font-bold font-display text-dark">Documents & confirmation</h2>
-                <p className="text-muted text-sm mt-1">Les fichiers sont optionnels mais augmentent vos chances.</p>
+                <p className="text-muted text-sm mt-1">Ces documents sont obligatoires pour finaliser votre candidature.</p>
               </div>
 
               {/* Pièce d'identité */}
               <div className="mb-4">
                 <label className="form-label">
-                  Pièce d'identité
+                  Pièce d'identité <span className="text-red-500">*</span>
                   <span className="text-gray-400 font-normal ml-1">(CNI ou Passeport — recto + verso)</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Recto */}
-                  <label className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group">
+                  <label className={`flex flex-col items-center gap-2 p-5 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group ${errors.cniRecto ? 'border-red-400' : 'border-gray-300'}`}>
                     <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                       <svg className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -303,11 +303,11 @@ export default function PostulerPage() {
                       <p className="text-sm font-semibold text-dark">{watch('cniRecto')?.[0]?.name ?? 'Recto'}</p>
                       <p className="text-xs text-muted">JPG, PNG, PDF · max 5 Mo</p>
                     </div>
-                    <input type="file" accept="image/*,.pdf" className="sr-only" {...register('cniRecto')} />
+                    <input type="file" accept="image/*,.pdf" className="sr-only" {...register('cniRecto', { required: 'Le recto de la pièce d\'identité est requis' })} />
                   </label>
 
                   {/* Verso */}
-                  <label className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group">
+                  <label className={`flex flex-col items-center gap-2 p-5 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group ${errors.cniVerso ? 'border-red-400' : 'border-gray-300'}`}>
                     <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                       <svg className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -317,9 +317,12 @@ export default function PostulerPage() {
                       <p className="text-sm font-semibold text-dark">{watch('cniVerso')?.[0]?.name ?? 'Verso'}</p>
                       <p className="text-xs text-muted">JPG, PNG, PDF · max 5 Mo</p>
                     </div>
-                    <input type="file" accept="image/*,.pdf" className="sr-only" {...register('cniVerso')} />
+                    <input type="file" accept="image/*,.pdf" className="sr-only" {...register('cniVerso', { required: 'Le verso de la pièce d\'identité est requis' })} />
                   </label>
                 </div>
+                {(errors.cniRecto || errors.cniVerso) && (
+                  <p className="text-red-500 text-xs mt-1">{errors.cniRecto?.message || errors.cniVerso?.message}</p>
+                )}
               </div>
 
               {/* Permis de conduire — uniquement pour le poste de chauffeur */}
@@ -348,8 +351,8 @@ export default function PostulerPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="form-label">Photo de profil <span className="text-gray-400 font-normal">(max 2 Mo)</span></label>
-                  <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group">
+                  <label className="form-label">Photo de profil <span className="text-red-500">*</span> <span className="text-gray-400 font-normal">(max 2 Mo)</span></label>
+                  <label className={`flex flex-col items-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group ${errors.photo ? 'border-red-400' : 'border-gray-300'}`}>
                     <svg className="w-8 h-8 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 10.5V6.75a.75.75 0 00-.75-.75H4.5A.75.75 0 003.75 6.75v10.5a.75.75 0 00.75.75h10.5a.75.75 0 00.75-.75V10.5M13.5 10.5H9.75" />
                     </svg>
@@ -357,13 +360,14 @@ export default function PostulerPage() {
                       <p className="text-sm font-medium text-dark">{watch('photo')?.[0]?.name ?? 'Choisir une photo'}</p>
                       <p className="text-xs text-muted mt-0.5">JPG, PNG · max 2 Mo</p>
                     </div>
-                    <input type="file" accept="image/*" className="sr-only" {...register('photo')} />
+                    <input type="file" accept="image/*" className="sr-only" {...register('photo', { required: 'La photo de profil est requise' })} />
                   </label>
+                  {errors.photo && <p className="text-red-500 text-xs mt-1">{errors.photo.message}</p>}
                 </div>
 
                 <div>
-                  <label className="form-label">CV <span className="text-gray-400 font-normal">(max 5 Mo)</span></label>
-                  <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group">
+                  <label className="form-label">CV <span className="text-red-500">*</span> <span className="text-gray-400 font-normal">(max 5 Mo)</span></label>
+                  <label className={`flex flex-col items-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group ${errors.cv ? 'border-red-400' : 'border-gray-300'}`}>
                     <svg className="w-8 h-8 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
@@ -371,8 +375,9 @@ export default function PostulerPage() {
                       <p className="text-sm font-medium text-dark">{watch('cv')?.[0]?.name ?? 'Choisir un CV'}</p>
                       <p className="text-xs text-muted mt-0.5">PDF, Word · max 5 Mo</p>
                     </div>
-                    <input type="file" accept=".pdf,.doc,.docx" className="sr-only" {...register('cv')} />
+                    <input type="file" accept=".pdf,.doc,.docx" className="sr-only" {...register('cv', { required: 'Le CV est requis' })} />
                   </label>
+                  {errors.cv && <p className="text-red-500 text-xs mt-1">{errors.cv.message}</p>}
                 </div>
               </div>
 

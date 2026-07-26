@@ -194,7 +194,7 @@ function GlobalSearch() {
   )
 }
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
+function SidebarContent({ onClose, collapsed = false, onToggleCollapse }: { onClose?: () => void; collapsed?: boolean; onToggleCollapse?: () => void }) {
   const navigate = useNavigate()
   const { data: msgStats } = useMessageStats()
   const nonLus = msgStats?.nonLus ?? 0
@@ -206,23 +206,35 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <aside className="flex flex-col w-full h-full bg-gradient-to-b from-[#12271C] to-[#0C1F15] text-white">
-      <div className="px-5 py-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
+    <aside className="relative flex flex-col w-full h-full bg-gradient-to-b from-[#12271C] to-[#0C1F15] text-white">
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
+          className="hidden lg:flex absolute -right-3 top-8 z-10 w-6 h-6 rounded-full bg-primary text-white items-center justify-center shadow-md shadow-black/30 hover:bg-primary-dark transition-colors"
+        >
+          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      <div className={`px-5 py-6 border-b border-white/10 ${collapsed ? 'lg:px-3' : ''}`}>
+        <div className={`flex items-center gap-3 ${collapsed ? 'lg:justify-center' : ''}`}>
           <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-md shadow-black/20">
             <img src="/logo.png" alt="Global Clean Tech" className="h-7 w-auto object-contain" />
           </div>
-          <div className="min-w-0">
+          <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
             <p className="font-display font-bold text-sm leading-tight truncate">Global Clean Tech</p>
             <p className="text-[11px] text-emerald-200/60">Espace administration</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-3 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent]">
+      <nav className="flex-1 px-3 py-3 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent]">
         {NAV_GROUPS.map(group => (
           <div key={group.title} className="mb-2">
-            <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100/40">
+            <p className={`px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100/40 ${collapsed ? 'lg:hidden' : ''}`}>
               {group.title}
             </p>
             <div className="space-y-0.5">
@@ -231,8 +243,9 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                   key={n.to}
                   to={n.to}
                   onClick={onClose}
+                  title={collapsed ? n.label : undefined}
                   className={({ isActive }) =>
-                    `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                    `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${collapsed ? 'lg:justify-center' : ''} ${
                       isActive
                         ? 'bg-primary text-white shadow-lg shadow-primary/30'
                         : 'text-emerald-50/60 hover:bg-white/[0.06] hover:text-white'
@@ -242,10 +255,17 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
                   {({ isActive }) => (
                     <>
                       {isActive && <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-300 rounded-r-full" />}
-                      {n.icon}
-                      <span className="flex-1">{n.label}</span>
+                      <span className="relative shrink-0">
+                        {n.icon}
+                        {'badge' in n && n.badge && nonLus > 0 && (
+                          <span className={`hidden ${collapsed ? 'lg:flex' : ''} absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-[15px] h-[15px] px-0.5 rounded-full items-center justify-center`}>
+                            {nonLus > 9 ? '9+' : nonLus}
+                          </span>
+                        )}
+                      </span>
+                      <span className={`flex-1 ${collapsed ? 'lg:hidden' : ''}`}>{n.label}</span>
                       {'badge' in n && n.badge && nonLus > 0 && (
-                        <span className="bg-red-500 text-white text-[11px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center">
+                        <span className={`${collapsed ? 'lg:hidden' : ''} bg-red-500 text-white text-[11px] font-bold min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center`}>
                           {nonLus > 9 ? '9+' : nonLus}
                         </span>
                       )}
@@ -259,16 +279,17 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </nav>
 
       <div className="px-3 py-4 border-t border-white/10 space-y-0.5">
-        <a href="/contact" target="_blank" className="flex items-center gap-3 px-3 py-2.5 text-emerald-50/60 hover:text-white text-sm font-medium transition-colors rounded-xl hover:bg-white/[0.06]">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-          Voir le site
+        <a href="/contact" target="_blank" title={collapsed ? 'Voir le site' : undefined} className={`flex items-center gap-3 px-3 py-2.5 text-emerald-50/60 hover:text-white text-sm font-medium transition-colors rounded-xl hover:bg-white/[0.06] ${collapsed ? 'lg:justify-center' : ''}`}>
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          <span className={collapsed ? 'lg:hidden' : ''}>Voir le site</span>
         </a>
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl text-sm font-medium transition-colors"
+          title={collapsed ? 'Déconnexion' : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl text-sm font-medium transition-colors ${collapsed ? 'lg:justify-center' : ''}`}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-          Déconnexion
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          <span className={collapsed ? 'lg:hidden' : ''}>Déconnexion</span>
         </button>
       </div>
     </aside>
@@ -277,14 +298,23 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('gct_sidebar_collapsed') === '1')
   const { data: me } = useMe()
   const avatarUrl = useAvatarUrl(me?.avatarPath)
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem('gct_sidebar_collapsed', next ? '1' : '0')
+      return next
+    })
+  }
 
   return (
     <div className="flex min-h-screen bg-surface">
       {/* Sidebar desktop — sticky : reste en place quand la page défile */}
-      <div className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0">
-        <SidebarContent />
+      <div className={`hidden lg:flex flex-col shrink-0 h-screen sticky top-0 transition-all duration-200 ${collapsed ? 'w-20' : 'w-64'}`}>
+        <SidebarContent collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
       </div>
 
       {/* Sidebar mobile */}

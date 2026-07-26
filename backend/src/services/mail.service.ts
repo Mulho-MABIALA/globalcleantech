@@ -226,6 +226,36 @@ export async function sendDemandeConfirmationMail(to: string, nom: string, servi
   })
 }
 
+export async function sendDemandeStatutUpdateMail(data: {
+  email: string
+  nom: string
+  statut: string
+  service: string
+  id: number
+}) {
+  const labels: Record<string, string> = {
+    nouvelle: '📥 Reçue', en_traitement: '🔍 En cours de traitement', cloturee: '✅ Clôturée',
+  }
+  const label = labels[data.statut] ?? data.statut
+  await deliver({
+    to: data.email,
+    subject: `Votre demande GCT — ${label}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:auto">
+        ${logoHeader()}
+        <h2 style="color:#1A7F4B">Mise à jour de votre demande</h2>
+        <p>Bonjour <strong>${data.nom}</strong>,</p>
+        <p>Votre demande concernant <strong>${data.service}</strong> vient d'être mise à jour :</p>
+        <div style="padding:16px;background:#f0fdf4;border-radius:8px;text-align:center;margin:20px 0;border-left:4px solid #1A7F4B">
+          <span style="font-size:20px;font-weight:700;color:#1A7F4B">${label}</span>
+        </div>
+        <p style="color:#666;font-size:14px">Pour toute question, contactez-nous par WhatsApp ou email à contact@globalcleantechsn.com.</p>
+        <p style="color:#999;font-size:12px;margin-top:24px">Global Clean Tech · Thiès, Sénégal</p>
+      </div>
+    `,
+  })
+}
+
 /**
  * Envoie l'affiche visuelle d'un candidat (générée côté frontend, signée par
  * l'administrateur) par email — au candidat lui-même ou à un client. Lève une

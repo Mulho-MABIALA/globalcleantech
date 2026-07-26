@@ -31,6 +31,19 @@ export async function createCandidature(req: AuthRequest, res: Response) {
 
   const files = req.files as Record<string, Express.Multer.File[]> | undefined
 
+  const missing: { field: string; message: string }[] = []
+  if (!files?.cv?.[0]) missing.push({ field: 'cv', message: 'Le CV est requis.' })
+  if (!files?.photo?.[0]) missing.push({ field: 'photo', message: 'La photo de profil est requise.' })
+  if (!files?.cniRecto?.[0]) missing.push({ field: 'cniRecto', message: "Le recto de la pièce d'identité est requis." })
+  if (!files?.cniVerso?.[0]) missing.push({ field: 'cniVerso', message: "Le verso de la pièce d'identité est requis." })
+  if (parsed.data.posteSouhaite === 'chauffeur' && !files?.permis?.[0]) {
+    missing.push({ field: 'permis', message: 'Le permis de conduire est requis pour le poste de chauffeur.' })
+  }
+  if (missing.length > 0) {
+    res.status(422).json({ message: 'Documents manquants.', errors: missing })
+    return
+  }
+
   const candidature = await prisma.candidature.create({
     data: {
       nomComplet: parsed.data.nomComplet,

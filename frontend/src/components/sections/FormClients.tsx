@@ -33,6 +33,16 @@ const SERVICE_OPTIONS = [
   { value: 'autre', label: '✨ Autre service' },
 ]
 
+const POSTE_OPTIONS = [
+  { value: 'Femme de ménage', label: 'Femme de ménage' },
+  { value: 'Nounou', label: 'Nounou / Garde d\'enfants' },
+  { value: 'Cuisinier(ère)', label: 'Cuisinier(ère)' },
+  { value: 'Chauffeur', label: 'Chauffeur' },
+  { value: 'Gardien', label: 'Gardien / Vigile' },
+  { value: 'Majordome', label: 'Majordome' },
+  { value: 'Autre', label: 'Autre' },
+]
+
 export default function FormClients() {
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -137,7 +147,12 @@ export default function FormClients() {
             {service === 'placement' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-surface rounded-xl border border-gray-100">
                 <F id="posteRecherche" label="Poste recherché *" error={errors.posteRecherche?.message}>
-                  <input id="posteRecherche" {...register('posteRecherche')} className={`form-input ${errors.posteRecherche ? 'form-input-error' : ''}`} placeholder="Ex: Femme de ménage..." />
+                  <select id="posteRecherche" {...register('posteRecherche')} className={`form-input ${errors.posteRecherche ? 'form-input-error' : ''}`} defaultValue="">
+                    <option value="" disabled>-- Choisir --</option>
+                    {POSTE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </F>
                 <F id="nombrePersonnes" label="Nombre de personnes" error={undefined}>
                   <input id="nombrePersonnes" type="number" min="1" {...register('nombrePersonnes')} className="form-input" placeholder="1" />

@@ -2,10 +2,23 @@ import { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { AuthRequest } from '../middlewares/auth.middleware'
 import { DemandeSchema, UpdateDemandeSchema } from '../schemas/demande.schema'
-import { sendDemandeAdminMail, sendDemandeConfirmationMail } from '../services/mail.service'
+import { sendDemandeAdminMail, sendDemandeConfirmationMail, sendDemandeStatutUpdateMail } from '../services/mail.service'
 import { createNotification } from '../services/notification.service'
 
 const prisma = new PrismaClient()
+
+const SERVICE_LABELS: Record<string, string> = {
+  placement: 'Placement de personnel',
+  impression: 'Impression / Photocopie',
+  redaction: 'Rédaction / Communication',
+  transfert: "Transfert d'argent",
+  communication: 'Communication / Journalisme',
+  autre: 'Autre',
+}
+
+const STATUT_LABELS: Record<string, string> = {
+  nouvelle: 'Nouvelle', en_traitement: 'En traitement', cloturee: 'Clôturée',
+}
 
 export async function createDemande(req: Request, res: Response) {
   const parsed = DemandeSchema.safeParse(req.body)
@@ -116,7 +129,30 @@ export async function updateDemande(req: AuthRequest, res: Response) {
     res.status(422).json({ message: 'Données invalides.', errors: parsed.error.errors })
     return
   }
+
+  const prev = await prisma.demande.findUnique({ where: { id } })
   const updated = await prisma.demande.update({ where: { id }, data: parsed.data })
+
+  // Notifie le client par email dès que le statut de sa demande change
+  if (parsed.data.statut && prev && parsed.data.statut !== prev.statut) {
+    if (updated.email) {
+      sendDemandeStatutUpdateMail({
+        email: updated.email,
+        nom: updated.nomRaisonSociale,
+        statut: updated.statut,
+        service: SERVICE_LABELS[updated.serviceSouhaite] ?? updated.serviceSouhaite,
+        id: updated.id,
+      }).catch(() => {})
+    }
+
+    createNotification({
+      type: 'demande_statut',
+      titre: 'Statut de demande modifié',
+      message: `${updated.nomRaisonSociale} → ${STATUT_LABELS[updated.statut] ?? updated.statut}`,
+      lien: `/admin/demandes/${updated.id}`,
+    }).catch(() => {})
+  }
+
   res.json(updated)
 }
 
