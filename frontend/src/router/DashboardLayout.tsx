@@ -211,9 +211,9 @@ function SidebarContent({ onClose, collapsed = false, onToggleCollapse }: { onCl
         <button
           onClick={onToggleCollapse}
           title={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
-          className="hidden lg:flex absolute -right-3 top-8 z-10 w-6 h-6 rounded-full bg-primary text-white items-center justify-center shadow-md shadow-black/30 hover:bg-primary-dark transition-colors"
+          className="hidden lg:flex absolute right-2.5 top-7 z-50 w-8 h-8 rounded-full bg-white text-primary items-center justify-center shadow-lg ring-1 ring-black/5 hover:bg-primary hover:text-white transition-colors"
         >
-          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <svg className={`w-4 h-4 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>

@@ -4,10 +4,12 @@ import { useCandidature, useUpdateCandidature, useDeleteCandidature } from '../.
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import EnvoyerAfficheModal from '../../components/dashboard/EnvoyerAfficheModal'
+import CreatePlacementModal from '../../components/dashboard/CreatePlacementModal'
 import toast from 'react-hot-toast'
 import { POSTE_LABELS, EXPERIENCE_LABELS, STATUT_CANDIDATURE_LABELS } from '../../types/candidature'
 import { api } from '../../services/api'
 import { useAvatarUrl } from '../../hooks/useMe'
+import { usePlacementsByCandidature } from '../../hooks/usePlacements'
 
 export default function CandidatureDetail() {
   const { id } = useParams<{ id: string }>()
@@ -20,7 +22,9 @@ export default function CandidatureDetail() {
   const [notes, setNotes] = useState('')
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [afficheOpen, setAfficheOpen] = useState(false)
+  const [placementOpen, setPlacementOpen] = useState(false)
   const photoUrl = useAvatarUrl(c?.photoPath)
+  const { data: placements } = usePlacementsByCandidature(Number(id))
 
   React.useEffect(() => {
     if (c) {
@@ -116,6 +120,10 @@ export default function CandidatureDetail() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <button onClick={() => setPlacementOpen(true)} className="flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-primary-dark transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+            Créer un placement
+          </button>
           <button onClick={() => setAfficheOpen(true)} className="flex items-center gap-2 text-primary text-sm font-medium hover:underline">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
             Envoyer l'affiche par email
@@ -149,6 +157,32 @@ export default function CandidatureDetail() {
             <div className="card">
               <h2 className="font-semibold font-display text-dark mb-2">Description / Compétences</h2>
               <p className="text-sm text-muted leading-relaxed whitespace-pre-wrap">{c.description}</p>
+            </div>
+          )}
+
+          {placements && placements.length > 0 && (
+            <div className="card">
+              <h2 className="font-semibold font-display text-dark mb-4">Placements</h2>
+              <div className="space-y-2">
+                {placements.map((p) => (
+                  <div key={p.id} className="flex items-start justify-between gap-3 px-4 py-3 rounded-lg bg-emerald-50">
+                    <div>
+                      <p className="text-sm font-semibold text-dark">
+                        {p.demande ? p.demande.nomRaisonSociale : 'Particulier direct'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">
+                        Début : {new Date(p.dateDebut).toLocaleDateString('fr-FR')}
+                        {p.dateFin && ` · Fin : ${new Date(p.dateFin).toLocaleDateString('fr-FR')}`}
+                        {p.salaire && ` · ${p.salaire}`}
+                      </p>
+                      {p.notes && <p className="text-xs text-muted mt-1">{p.notes}</p>}
+                    </div>
+                    {p.demande && (
+                      <Link to={`/admin/demandes/${p.demande.id}`} className="text-primary text-xs font-medium hover:underline shrink-0">Fiche client</Link>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -236,6 +270,7 @@ export default function CandidatureDetail() {
       </Modal>
 
       <EnvoyerAfficheModal open={afficheOpen} onClose={() => setAfficheOpen(false)} candidature={c} />
+      <CreatePlacementModal open={placementOpen} onClose={() => setPlacementOpen(false)} candidatureId={c.id} candidatNom={c.nomComplet} />
     </div>
   )
 }
