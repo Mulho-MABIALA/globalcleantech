@@ -56,6 +56,8 @@ export async function createCandidature(req: AuthRequest, res: Response) {
       description: parsed.data.description || null,
       disponibilite: parsed.data.disponibilite,
       dateDisponibilite: parsed.data.dateDisponibilite ? new Date(parsed.data.dateDisponibilite) : null,
+      ...(parsed.data.statut ? { statut: parsed.data.statut } : {}),
+      ...(parsed.data.notesInternes ? { notesInternes: parsed.data.notesInternes } : {}),
     },
   })
 

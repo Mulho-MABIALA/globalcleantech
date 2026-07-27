@@ -28,6 +28,8 @@ export const CandidatureSchema = z.object({
     .refine((v) => v === true || v === 'true', {
       message: 'Vous devez accepter les conditions.',
     }),
+  statut: z.enum(['a_traiter', 'en_cours', 'place', 'archive']).optional(),
+  notesInternes: z.string().max(2000).optional().or(z.literal('')),
 })
 
 export type CandidatureInput = z.infer<typeof CandidatureSchema>

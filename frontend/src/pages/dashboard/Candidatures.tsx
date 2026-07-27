@@ -54,6 +54,10 @@ export default function Candidatures() {
   const [createOpen, setCreateOpen] = useState(false)
   const [cvFile, setCvFile] = useState<File | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [cniRectoFile, setCniRectoFile] = useState<File | null>(null)
+  const [cniVersoFile, setCniVersoFile] = useState<File | null>(null)
+  const [permisFile, setPermisFile] = useState<File | null>(null)
+  const [docsError, setDocsError] = useState<string | null>(null)
 
   const { data, isLoading } = useCandidatures({ page, statut, poste, search, limit: 20 })
   const deleteMut = useDeleteCandidature()
@@ -80,9 +84,10 @@ export default function Candidatures() {
     }).catch(() => toast.error('CV introuvable.'))
   }
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateForm>({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
   })
+  const posteWatch = watch('posteSouhaite')
 
   const createMut = useMutation({
     mutationFn: (fd: FormData) =>
@@ -94,6 +99,10 @@ export default function Candidatures() {
       reset()
       setCvFile(null)
       setPhotoFile(null)
+      setCniRectoFile(null)
+      setCniVersoFile(null)
+      setPermisFile(null)
+      setDocsError(null)
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -102,6 +111,18 @@ export default function Candidatures() {
   })
 
   const onSubmit = (data: CreateForm) => {
+    const missingDocs: string[] = []
+    if (!cvFile) missingDocs.push('CV')
+    if (!photoFile) missingDocs.push('Photo')
+    if (!cniRectoFile) missingDocs.push("CNI recto")
+    if (!cniVersoFile) missingDocs.push("CNI verso")
+    if (data.posteSouhaite === 'chauffeur' && !permisFile) missingDocs.push('Permis de conduire')
+    if (missingDocs.length > 0) {
+      setDocsError(`Documents manquants : ${missingDocs.join(', ')}.`)
+      return
+    }
+    setDocsError(null)
+
     const fd = new FormData()
     fd.append('nomComplet', data.nomComplet)
     fd.append('dateNaissance', data.dateNaissance)
@@ -112,9 +133,14 @@ export default function Candidatures() {
     fd.append('experience', data.experience)
     fd.append('disponibilite', data.disponibilite)
     if (data.description) fd.append('description', data.description)
+    if (data.statut) fd.append('statut', data.statut)
+    if (data.notesInternes) fd.append('notesInternes', data.notesInternes)
     fd.append('accepteConditions', 'true')
     if (cvFile) fd.append('cv', cvFile)
     if (photoFile) fd.append('photo', photoFile)
+    if (cniRectoFile) fd.append('cniRecto', cniRectoFile)
+    if (cniVersoFile) fd.append('cniVerso', cniVersoFile)
+    if (permisFile) fd.append('permis', permisFile)
     createMut.mutate(fd)
   }
 
@@ -146,7 +172,7 @@ export default function Candidatures() {
         <div className="flex items-center gap-2">
           <button onClick={exportCsv} className="btn-outline text-sm py-2">Exporter CSV</button>
           <button
-            onClick={() => { reset(); setCvFile(null); setPhotoFile(null); setCreateOpen(true) }}
+            onClick={() => { reset(); setCvFile(null); setPhotoFile(null); setCniRectoFile(null); setCniVersoFile(null); setPermisFile(null); setDocsError(null); setCreateOpen(true) }}
             className="btn-primary text-sm py-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -251,7 +277,7 @@ export default function Candidatures() {
       )}
 
       {/* ── Modal Création ── */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Nouvelle candidature" maxWidth="2xl">
+      <Modal open={createOpen} onClose={() => { setCreateOpen(false); setDocsError(null) }} title="Nouvelle candidature" maxWidth="2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FieldRow id="nomComplet" label="Nom complet *" error={errors.nomComplet?.message}>
@@ -287,33 +313,73 @@ export default function Candidatures() {
                 <option value="cinq_plus">Plus de 5 ans</option>
               </select>
             </FieldRow>
+            <FieldRow id="statut" label="Statut" error={undefined}>
+              <select id="statut" {...register('statut')} className="form-input">
+                <option value="">-- Par défaut (À traiter) --</option>
+                {Object.entries(STATUT_CANDIDATURE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </FieldRow>
           </div>
 
           <FieldRow id="description" label="Notes / Description" error={undefined}>
-            <textarea id="description" {...register('description')} rows={3} className="form-input resize-none" placeholder="Compétences, expérience, observations..." />
+            <textarea id="description" {...register('description')} rows={2} className="form-input resize-none" placeholder="Compétences, expérience, observations..." />
           </FieldRow>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-surface rounded-xl">
-            <div>
-              <p className="form-label mb-1.5">CV (PDF, DOC — max 5 Mo)</p>
-              <label className="flex items-center gap-2 border border-dashed border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-primary transition-colors text-sm text-muted hover:text-primary">
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                {cvFile ? <span className="text-primary truncate">{cvFile.name}</span> : 'Choisir un fichier'}
-                <input type="file" accept=".pdf,.doc,.docx" className="sr-only" onChange={e => setCvFile(e.target.files?.[0] || null)} />
-              </label>
+          <FieldRow id="notesInternes" label="Notes internes (non visibles du candidat)" error={undefined}>
+            <textarea id="notesInternes" {...register('notesInternes')} rows={2} className="form-input resize-none" placeholder="Remarques réservées à l'équipe..." />
+          </FieldRow>
+
+          <div>
+            <p className="form-label mb-1.5">Documents <span className="text-red-500">*</span> <span className="text-gray-400 font-normal">(obligatoires, comme sur le formulaire public)</span></p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-surface rounded-xl">
+              <div>
+                <p className="text-xs text-muted mb-1.5">CV (PDF, DOC — max 5 Mo)</p>
+                <label className={`flex items-center gap-2 border border-dashed rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm text-muted hover:text-primary ${!cvFile && docsError ? 'border-red-400' : 'border-gray-200 hover:border-primary'}`}>
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  {cvFile ? <span className="text-primary truncate">{cvFile.name}</span> : 'Choisir un fichier'}
+                  <input type="file" accept=".pdf,.doc,.docx" className="sr-only" onChange={e => setCvFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+              <div>
+                <p className="text-xs text-muted mb-1.5">Photo (JPG, PNG — max 2 Mo)</p>
+                <label className={`flex items-center gap-2 border border-dashed rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm text-muted hover:text-primary ${!photoFile && docsError ? 'border-red-400' : 'border-gray-200 hover:border-primary'}`}>
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  {photoFile ? <span className="text-primary truncate">{photoFile.name}</span> : 'Choisir un fichier'}
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp" className="sr-only" onChange={e => setPhotoFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+              <div>
+                <p className="text-xs text-muted mb-1.5">CNI recto (JPG, PNG, PDF — max 2 Mo)</p>
+                <label className={`flex items-center gap-2 border border-dashed rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm text-muted hover:text-primary ${!cniRectoFile && docsError ? 'border-red-400' : 'border-gray-200 hover:border-primary'}`}>
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z M7 15h4M7 11h.01" /></svg>
+                  {cniRectoFile ? <span className="text-primary truncate">{cniRectoFile.name}</span> : 'Choisir un fichier'}
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => setCniRectoFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+              <div>
+                <p className="text-xs text-muted mb-1.5">CNI verso (JPG, PNG, PDF — max 2 Mo)</p>
+                <label className={`flex items-center gap-2 border border-dashed rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm text-muted hover:text-primary ${!cniVersoFile && docsError ? 'border-red-400' : 'border-gray-200 hover:border-primary'}`}>
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z M7 15h4M7 11h.01" /></svg>
+                  {cniVersoFile ? <span className="text-primary truncate">{cniVersoFile.name}</span> : 'Choisir un fichier'}
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => setCniVersoFile(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+              {posteWatch === 'chauffeur' && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-muted mb-1.5">Permis de conduire (requis pour le poste de chauffeur)</p>
+                  <label className={`flex items-center gap-2 border border-dashed rounded-lg px-3 py-2 cursor-pointer transition-colors text-sm text-muted hover:text-primary ${!permisFile && docsError ? 'border-red-400' : 'border-gray-200 hover:border-primary'}`}>
+                    <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z M7 15h4M7 11h.01" /></svg>
+                    {permisFile ? <span className="text-primary truncate">{permisFile.name}</span> : 'Choisir un fichier'}
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="sr-only" onChange={e => setPermisFile(e.target.files?.[0] || null)} />
+                  </label>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="form-label mb-1.5">Photo (JPG, PNG — max 2 Mo)</p>
-              <label className="flex items-center gap-2 border border-dashed border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-primary transition-colors text-sm text-muted hover:text-primary">
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                {photoFile ? <span className="text-primary truncate">{photoFile.name}</span> : 'Choisir un fichier'}
-                <input type="file" accept=".jpg,.jpeg,.png,.webp" className="sr-only" onChange={e => setPhotoFile(e.target.files?.[0] || null)} />
-              </label>
-            </div>
+            {docsError && <p className="form-error text-red-500 text-xs mt-1.5">{docsError}</p>}
           </div>
 
           <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-            <button type="button" onClick={() => setCreateOpen(false)} className="btn-ghost">Annuler</button>
+            <button type="button" onClick={() => { setCreateOpen(false); setDocsError(null) }} className="btn-ghost">Annuler</button>
             <button type="submit" disabled={createMut.isPending} className="btn-primary">
               {createMut.isPending ? 'Enregistrement...' : 'Créer la candidature'}
             </button>

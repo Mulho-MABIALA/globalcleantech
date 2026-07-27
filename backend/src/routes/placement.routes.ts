@@ -2,9 +2,24 @@ import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import { authMiddleware } from '../middlewares/auth.middleware'
+import { sendStatutUpdateMail, sendDemandeStatutUpdateMail } from '../services/mail.service'
+import { createNotification } from '../services/notification.service'
 
 const router = Router()
 const prisma = new PrismaClient()
+
+const POSTE_LABELS: Record<string, string> = {
+  femme_menage: 'Femme de ménage', nounou: 'Nounou', cuisinier: 'Cuisinier(ère)',
+  chauffeur: 'Chauffeur', gardien: 'Gardien', majordome: 'Majordome', autre: 'Autre',
+}
+const SERVICE_LABELS: Record<string, string> = {
+  placement: 'Placement de personnel',
+  impression: 'Impression / Photocopie',
+  redaction: 'Rédaction / Communication',
+  transfert: "Transfert d'argent",
+  communication: 'Communication / Journalisme',
+  autre: 'Autre',
+}
 
 const CreateSchema = z.object({
   candidatureId: z.number().int(),
@@ -66,7 +81,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
   const { candidatureId, demandeId, dateDebut, dateFin, salaire, notes } = parsed.data
 
-  const placement = await prisma.$transaction(async (tx) => {
+  const { placement, candidatureInfo, demandeAvant } = await prisma.$transaction(async (tx) => {
     const p = await tx.placement.create({
       data: {
         candidatureId,
@@ -82,13 +97,48 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       },
     })
     // Marquer la candidature comme placée
-    await tx.candidature.update({ where: { id: candidatureId }, data: { statut: 'place' } })
-    // Marquer la demande comme clôturée si liée
+    const candidatureInfo = await tx.candidature.update({ where: { id: candidatureId }, data: { statut: 'place' } })
+    // Marquer la demande comme clôturée si liée (on garde l'état d'avant pour savoir si ça a vraiment changé)
+    let demandeAvant = null
     if (demandeId) {
+      demandeAvant = await tx.demande.findUnique({ where: { id: demandeId } })
       await tx.demande.update({ where: { id: demandeId }, data: { statut: 'cloturee' } })
     }
-    return p
+    return { placement: p, candidatureInfo, demandeAvant }
   })
+
+  // Notifier le candidat + l'équipe (même comportement qu'un changement de statut manuel)
+  if (candidatureInfo?.email) {
+    sendStatutUpdateMail({
+      email: candidatureInfo.email,
+      nom: candidatureInfo.nomComplet,
+      statut: 'place',
+      poste: POSTE_LABELS[candidatureInfo.posteSouhaite] ?? candidatureInfo.posteSouhaite,
+      id: candidatureInfo.id,
+    }).catch(() => {})
+  }
+  createNotification({
+    type: 'candidature_statut',
+    titre: 'Statut de candidature modifié',
+    message: `${placement.candidature.nomComplet} → Placé(e)`,
+    lien: `/admin/candidatures/${candidatureId}`,
+  }).catch(() => {})
+
+  if (demandeAvant && demandeAvant.statut !== 'cloturee' && demandeAvant.email) {
+    sendDemandeStatutUpdateMail({
+      email: demandeAvant.email,
+      nom: demandeAvant.nomRaisonSociale,
+      statut: 'cloturee',
+      service: SERVICE_LABELS[demandeAvant.serviceSouhaite] ?? demandeAvant.serviceSouhaite,
+      id: demandeAvant.id,
+    }).catch(() => {})
+    createNotification({
+      type: 'demande_statut',
+      titre: 'Statut de demande modifié',
+      message: `${demandeAvant.nomRaisonSociale} → Clôturée`,
+      lien: `/admin/demandes/${demandeAvant.id}`,
+    }).catch(() => {})
+  }
 
   res.status(201).json(placement)
 })
@@ -116,7 +166,34 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 
 // DELETE /api/placements/:id
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
-  await prisma.placement.delete({ where: { id: parseInt(req.params.id) } })
+  const id = parseInt(req.params.id)
+  const existing = await prisma.placement.findUnique({ where: { id } })
+  if (!existing) { res.status(404).json({ message: 'Placement introuvable.' }); return }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.placement.delete({ where: { id } })
+
+    // Si c'était le seul/dernier placement de ce candidat, on remet la candidature "En cours"
+    const remainingForCandidature = await tx.placement.count({ where: { candidatureId: existing.candidatureId } })
+    if (remainingForCandidature === 0) {
+      const candidature = await tx.candidature.findUnique({ where: { id: existing.candidatureId } })
+      if (candidature?.statut === 'place') {
+        await tx.candidature.update({ where: { id: existing.candidatureId }, data: { statut: 'en_cours' } })
+      }
+    }
+
+    // Si la demande liée n'a plus aucun placement, on la rouvre "En traitement"
+    if (existing.demandeId) {
+      const remainingForDemande = await tx.placement.count({ where: { demandeId: existing.demandeId } })
+      if (remainingForDemande === 0) {
+        const demande = await tx.demande.findUnique({ where: { id: existing.demandeId } })
+        if (demande?.statut === 'cloturee') {
+          await tx.demande.update({ where: { id: existing.demandeId }, data: { statut: 'en_traitement' } })
+        }
+      }
+    }
+  })
+
   res.json({ message: 'Placement supprimé.' })
 })
 

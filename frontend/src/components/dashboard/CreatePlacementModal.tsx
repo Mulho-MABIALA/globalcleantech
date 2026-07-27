@@ -52,24 +52,24 @@ export default function CreatePlacementModal({ open, onClose, candidatureId, can
   }
 
   return (
-    <Modal open={open} onClose={() => { reset(); onClose() }} title="Créer un placement">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal open={open} onClose={() => { reset(); onClose() }} title="Créer un placement" maxWidth="2xl">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <p className="text-sm text-muted">
           Confirmer le placement de <strong className="text-dark">{candidatNom}</strong> chez un client ou un particulier.
           Le statut de la candidature passera automatiquement à "Placé(e)".
         </p>
 
-        <div>
-          <label className="form-label">Client (demande liée) <span className="text-gray-400 font-normal">(optionnel)</span></label>
-          <select value={demandeId} onChange={(e) => setDemandeId(e.target.value)} className="form-input">
-            <option value="">— Particulier direct / non lié à une demande —</option>
-            {demandesOuvertes.map((d: { id: number; nomRaisonSociale: string }) => (
-              <option key={d.id} value={d.id}>{d.nomRaisonSociale}</option>
-            ))}
-          </select>
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="form-label">Client (demande liée) <span className="text-gray-400 font-normal">(optionnel)</span></label>
+            <select value={demandeId} onChange={(e) => setDemandeId(e.target.value)} className="form-input">
+              <option value="">— Particulier direct / non lié à une demande —</option>
+              {demandesOuvertes.map((d: { id: number; nomRaisonSociale: string }) => (
+                <option key={d.id} value={d.id}>{d.nomRaisonSociale}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="form-label">Date de début <span className="text-red-500">*</span></label>
             <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} className="form-input" required />
@@ -78,19 +78,19 @@ export default function CreatePlacementModal({ open, onClose, candidatureId, can
             <label className="form-label">Date de fin <span className="text-gray-400 font-normal">(optionnel)</span></label>
             <input type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} className="form-input" min={dateDebut} />
           </div>
+
+          <div className="sm:col-span-2">
+            <label className="form-label">Salaire <span className="text-gray-400 font-normal">(optionnel)</span></label>
+            <input value={salaire} onChange={(e) => setSalaire(e.target.value)} className="form-input" placeholder="Ex: 60 000 FCFA/mois" />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="form-label">Notes <span className="text-gray-400 font-normal">(optionnel)</span></label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="form-input resize-none" placeholder="Détails du placement..." />
+          </div>
         </div>
 
-        <div>
-          <label className="form-label">Salaire <span className="text-gray-400 font-normal">(optionnel)</span></label>
-          <input value={salaire} onChange={(e) => setSalaire(e.target.value)} className="form-input" placeholder="Ex: 60 000 FCFA/mois" />
-        </div>
-
-        <div>
-          <label className="form-label">Notes <span className="text-gray-400 font-normal">(optionnel)</span></label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="form-input resize-none" placeholder="Détails du placement..." />
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-3 pt-1">
           <button type="button" onClick={() => { reset(); onClose() }} className="btn-ghost">Annuler</button>
           <button type="submit" disabled={createMut.isPending} className="btn-primary px-6 disabled:opacity-60">
             {createMut.isPending ? 'Enregistrement...' : 'Confirmer le placement'}
