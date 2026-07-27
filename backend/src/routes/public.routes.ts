@@ -18,10 +18,10 @@ router.get('/stats', async (_req: Request, res: Response) => {
       clients,
       candidats: totalCandidats,
       services: 6,
-      annees: new Date().getFullYear() - 2019,
+      annees: new Date().getFullYear() - 2021,
     })
   } catch {
-    res.json({ placements: 0, clients: 0, candidats: 0, services: 6, annees: 5 })
+    res.json({ placements: 0, clients: 0, candidats: 0, services: 6, annees: new Date().getFullYear() - 2021 })
   }
 })
 

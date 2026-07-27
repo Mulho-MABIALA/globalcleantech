@@ -41,8 +41,8 @@ const SLIDES = [
   },
   {
     img: 'https://images.unsplash.com/photo-1504439468489-c8920d796a29?auto=format&fit=crop&w=1920&q=80',
-    tag: 'Depuis 2019 · Thiès',
-    headline: 'De confiance,\ndepuis 2019.',
+    tag: 'Depuis 2021 · Thiès',
+    headline: 'De confiance,\ndepuis 2021.',
   },
 ]
 

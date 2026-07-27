@@ -332,7 +332,7 @@ export async function sendNewsletterMail(to: string, sujet: string, contenu: str
           <div style="color:#333333;font-size:15px;line-height:1.7">${corps}</div>
           <p style="margin-top:28px;color:#666666;font-size:14px;line-height:1.6">
             Cordialement,<br/><strong>L'équipe Global Clean Tech</strong><br/>
-            Quartier Médina Fall, Thiès, Sénégal<br/>
+            Quartier Sampathé, Thiès, Sénégal<br/>
             +221 75 642 26 00 · +221 77 350 18 25 · contact@globalcleantechsn.com
           </p>
         </div>

@@ -44,11 +44,11 @@ export default function MentionsLegales() {
         <Section num="1" title="Éditeur du site">
           <p>
             Le présent site est édité par <strong>Global Clean Tech</strong>, agence de placement de personnel
-            et de services, dont le siège est situé au Quartier Médina Fall, Thiès, Sénégal.
+            et de services, dont le siège est situé au Quartier Sampathé, Thiès, Sénégal.
           </p>
           <ul className="space-y-1.5">
             <li><strong>Dénomination :</strong> Global Clean Tech</li>
-            <li><strong>Adresse :</strong> Quartier Médina Fall, Thiès, Sénégal</li>
+            <li><strong>Adresse :</strong> Quartier Sampathé, Thiès, Sénégal</li>
             <li><strong>Téléphone :</strong> <a href="tel:+221756422600" className="text-primary hover:underline">+221 75 642 26 00</a> · <a href="tel:+221773501825" className="text-primary hover:underline">+221 77 350 18 25</a></li>
             <li><strong>Email :</strong> <a href="mailto:contact@globalcleantechsn.com" className="text-primary hover:underline">contact@globalcleantechsn.com</a></li>
           </ul>

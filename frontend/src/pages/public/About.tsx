@@ -119,7 +119,7 @@ export default function About() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-dark">Thiès, Sénégal</p>
-                  <p className="text-[11px] text-muted">Depuis 2019</p>
+                  <p className="text-[11px] text-muted">Depuis 2021</p>
                 </div>
               </div>
             </div>
