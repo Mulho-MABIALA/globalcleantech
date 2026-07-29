@@ -20,6 +20,16 @@ const prisma = new PrismaClient()
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
 
 export async function createCandidature(req: AuthRequest, res: Response) {
+  // Le formulaire public peut être fermé depuis l'admin (SiteContent "candidatures_ouvertes").
+  // Un admin authentifié (création manuelle) n'est jamais bloqué par ce réglage.
+  if (!req.user) {
+    const toggle = await prisma.siteContent.findUnique({ where: { cle: 'candidatures_ouvertes' } })
+    if (toggle?.valeur === 'false') {
+      res.status(403).json({ message: 'Les candidatures sont temporairement fermées. Merci de réessayer plus tard.' })
+      return
+    }
+  }
+
   const parsed = CandidatureSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(422).json({

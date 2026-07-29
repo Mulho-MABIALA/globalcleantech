@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -63,6 +63,21 @@ export default function Candidatures() {
   const deleteMut = useDeleteCandidature()
   const updateMut = useUpdateCandidature()
   const qc = useQueryClient()
+
+  const { data: siteContent } = useQuery<{ cle: string; valeur: string }[]>({
+    queryKey: ['site-content'],
+    queryFn: () => api.get('/dashboard/content').then(r => r.data),
+  })
+  const candidaturesOuvertes = siteContent?.find(c => c.cle === 'candidatures_ouvertes')?.valeur !== 'false'
+  const toggleCandidaturesMut = useMutation({
+    mutationFn: (open: boolean) =>
+      api.put('/dashboard/content/candidatures_ouvertes', { valeur: open ? 'true' : 'false' }).then(() => open),
+    onSuccess: (open) => {
+      qc.invalidateQueries({ queryKey: ['site-content'] })
+      toast.success(open ? 'Candidatures rouvertes — le formulaire public est de nouveau accessible.' : 'Candidatures fermées — le formulaire public affiche un message et refuse les envois.')
+    },
+    onError: () => toast.error('Erreur lors de la mise à jour.'),
+  })
 
   const changeStatut = async (c: Candidature, newStatut: string) => {
     try {
@@ -170,6 +185,19 @@ export default function Candidatures() {
           <p className="text-muted text-sm mt-1">{data?.meta.total ?? 0} candidature(s) au total</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => toggleCandidaturesMut.mutate(!candidaturesOuvertes)}
+            disabled={toggleCandidaturesMut.isPending}
+            title="Ouvrir ou fermer le formulaire public de candidature"
+            className={`flex items-center gap-2 text-sm py-2 px-3 rounded-lg border font-medium transition-colors disabled:opacity-60 ${
+              candidaturesOuvertes
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${candidaturesOuvertes ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            {candidaturesOuvertes ? 'Candidatures ouvertes' : 'Candidatures fermées'}
+          </button>
           <button onClick={exportCsv} className="btn-outline text-sm py-2">Exporter CSV</button>
           <button
             onClick={() => { reset(); setCvFile(null); setPhotoFile(null); setCniRectoFile(null); setCniVersoFile(null); setPermisFile(null); setDocsError(null); setCreateOpen(true) }}

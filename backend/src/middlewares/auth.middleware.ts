@@ -22,6 +22,24 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
+/**
+ * Comme authMiddleware, mais ne bloque jamais la requête : si un token Bearer
+ * valide est présent, req.user est renseigné (utile pour distinguer un envoi
+ * admin authentifié d'un envoi public anonyme sur une route ouverte).
+ */
+export function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const payload = verifyToken(authHeader.split(' ')[1])
+      req.user = { id: payload.id, role: payload.role }
+    } catch {
+      // token invalide/expiré : on continue simplement sans req.user
+    }
+  }
+  next()
+}
+
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   if (req.user?.role !== 'admin') {
     res.status(403).json({ message: 'Accès réservé aux administrateurs.' })

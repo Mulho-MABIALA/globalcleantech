@@ -9,12 +9,12 @@ import {
   serveUpload,
   sendCandidatureAffiche,
 } from '../controllers/candidature.controller'
-import { authMiddleware } from '../middlewares/auth.middleware'
+import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.middleware'
 import { uploadCandidature } from '../middlewares/upload.middleware'
 
 const router = Router()
 
-router.post('/', uploadCandidature, createCandidature)
+router.post('/', uploadCandidature, optionalAuthMiddleware, createCandidature)
 
 router.use(authMiddleware)
 router.get('/export/csv', exportCandidaturesCsv)

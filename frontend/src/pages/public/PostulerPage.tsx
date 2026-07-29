@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { POSTE_LABELS, EXPERIENCE_LABELS, PosteSouhaite, Experience } from '../../types/candidature'
 
@@ -50,6 +51,12 @@ export default function PostulerPage() {
   } = useForm<FormData>({ mode: 'onBlur' })
 
   const poste = watch('posteSouhaite')
+
+  const { data: statusData, isLoading: statusLoading } = useQuery<{ cle: string; valeur: string | null }>({
+    queryKey: ['candidatures-ouvertes'],
+    queryFn: () => api.get('/public/content/candidatures_ouvertes').then(r => r.data),
+  })
+  const candidaturesFermees = statusData?.valeur === 'false'
 
   const goNext = async () => {
     const fields: (keyof FormData)[] = step === 1
@@ -105,6 +112,26 @@ export default function PostulerPage() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/" className="btn-primary">Retour à l'accueil</Link>
             <button onClick={() => { setSubmitted(false); setStep(1) }} className="btn-outline">Nouvelle candidature</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!statusLoading && candidaturesFermees) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center px-4 py-12 sm:py-20">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-black font-display text-dark mb-3">Candidatures temporairement fermées</h1>
+          <p className="text-muted mb-8">Nous ne pouvons pas accepter de nouvelles candidatures pour le moment. Merci de revenir un peu plus tard, ou de nous contacter directement.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/" className="btn-primary">Retour à l'accueil</Link>
+            <Link to="/contact" className="btn-outline">Nous contacter</Link>
           </div>
         </div>
       </div>
