@@ -7,6 +7,20 @@ import { createNotification } from '../services/notification.service'
 
 const prisma = new PrismaClient()
 
+// Ajoute automatiquement l'email d'un candidat/client à la newsletter s'il n'y est pas déjà
+// (ne réactive pas un désabonnement explicite existant).
+async function autoSubscribeNewsletter(email: string | null | undefined, nom: string) {
+  if (!email) return
+  try {
+    const existing = await prisma.newsletterSubscriber.findUnique({ where: { email } })
+    if (!existing) {
+      await prisma.newsletterSubscriber.create({ data: { email, nom } })
+    }
+  } catch (err) {
+    console.error('Auto-inscription newsletter échouée :', err)
+  }
+}
+
 const SERVICE_LABELS: Record<string, string> = {
   placement: 'Placement de personnel',
   impression: 'Impression / Photocopie',
@@ -72,6 +86,8 @@ export async function createDemande(req: Request, res: Response) {
   } catch (err) {
     console.error('Email demande non envoyé :', err)
   }
+
+  autoSubscribeNewsletter(demande.email, demande.nomRaisonSociale).catch(() => {})
 
   createNotification({
     type: 'demande',

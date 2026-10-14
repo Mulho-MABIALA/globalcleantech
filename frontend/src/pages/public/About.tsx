@@ -1,6 +1,7 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
+import { usePublicStats } from '../../hooks/usePublicStats'
 import { Link } from 'react-router-dom'
 
 type ContentMap = Record<string, string>
@@ -34,8 +35,12 @@ const VALEUR_ICONS = [
 
 const VALEUR_COLORS = ['emerald', 'amber', 'blue']
 
+const FALLBACK_PHOTO = 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80'
+
 export default function About() {
   const { data } = useAboutContent()
+  const { data: publicStats } = usePublicStats()
+  const photoUrl = data?.about_photo ? `/api/public/site-images/${data.about_photo}` : FALLBACK_PHOTO
 
   const valeurs = [
     { titre: c(data, 'about_valeur_1_titre', 'Intégrité'), desc: c(data, 'about_valeur_1_desc', 'Transparence et honnêteté dans chaque transaction et chaque placement.') },
@@ -44,8 +49,8 @@ export default function About() {
   ]
 
   const stats = [
-    { num: c(data, 'about_stat_placements', '500+'), label: 'Placements réalisés' },
-    { num: c(data, 'about_stat_clients', '150+'), label: 'Clients fidèles' },
+    { num: `${publicStats?.placements ?? 0}+`, label: 'Placements réalisés' },
+    { num: `${publicStats?.clients ?? 0}+`, label: 'Clients fidèles' },
     { num: c(data, 'about_stat_annees', '5+'), label: "Années d'expérience" },
     { num: c(data, 'about_stat_services', '6'), label: 'Services proposés' },
   ]
@@ -107,7 +112,7 @@ export default function About() {
             <div className="relative">
               <div className="rounded-3xl overflow-hidden shadow-2xl aspect-[4/3]">
                 <img
-                  src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=800&q=80"
+                  src={photoUrl}
                   alt="Équipe Global Clean Tech"
                   className="w-full h-full object-cover"
                 />

@@ -73,6 +73,31 @@ enum TypeNotification {
   systeme
 }
 
+enum EmplacementPub {
+  accueil
+  popup
+  global
+}
+
+model Publicite {
+  id          Int            @id @default(autoincrement())
+  titre       String         @db.VarChar(150)
+  description String?        @db.Text
+  annonceur   String?        @db.VarChar(150)
+  imagePath   String?        @db.VarChar(255)
+  lien        String?        @db.VarChar(255)
+  texteBouton String?        @db.VarChar(50)
+  emplacement EmplacementPub @default(accueil)
+  dateDebut   DateTime?
+  dateFin     DateTime?
+  ordre       Int            @default(0)
+  actif       Boolean        @default(true)
+  vues        Int            @default(0)
+  clics       Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
 model Actualite {
   id          Int      @id @default(autoincrement())
   titre       String   @db.VarChar(200)
@@ -106,6 +131,7 @@ model User {
   email              String             @unique @db.VarChar(150)
   password           String
   role               RoleUser           @default(gestionnaire)
+  permissions        Json?
   avatarPath         String?            @db.VarChar(255)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt

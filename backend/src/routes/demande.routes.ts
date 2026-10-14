@@ -7,17 +7,17 @@ import {
   deleteDemande,
   exportDemandesCsv,
 } from '../controllers/demande.controller'
-import { authMiddleware } from '../middlewares/auth.middleware'
+import { authMiddleware, requirePermission } from '../middlewares/auth.middleware'
 
 const router = Router()
 
 router.post('/', createDemande)
 
 router.use(authMiddleware)
-router.get('/export/csv', exportDemandesCsv)
-router.get('/', listDemandes)
-router.get('/:id', getDemande)
-router.patch('/:id', updateDemande)
-router.delete('/:id', deleteDemande)
+router.get('/export/csv', requirePermission('demandes', 'read'), exportDemandesCsv)
+router.get('/', requirePermission('demandes', 'read'), listDemandes)
+router.get('/:id', requirePermission('demandes', 'read'), getDemande)
+router.patch('/:id', requirePermission('demandes', 'edit'), updateDemande)
+router.delete('/:id', requirePermission('demandes', 'edit'), deleteDemande)
 
 export default router

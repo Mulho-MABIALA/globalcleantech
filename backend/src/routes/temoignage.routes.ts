@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
-import { authMiddleware, requireAdmin } from '../middlewares/auth.middleware'
+import { authMiddleware, requirePermission } from '../middlewares/auth.middleware'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -25,13 +25,13 @@ router.get('/', async (_req: Request, res: Response) => {
 })
 
 // GET /api/temoignages/admin — tous (admin)
-router.get('/admin', authMiddleware, async (_req: Request, res: Response) => {
+router.get('/admin', authMiddleware, requirePermission('temoignages', 'read'), async (_req: Request, res: Response) => {
   const data = await prisma.temoignage.findMany({ orderBy: [{ ordre: 'asc' }, { createdAt: 'desc' }] })
   res.json(data)
 })
 
 // POST — admin
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, requirePermission('temoignages', 'edit'), async (req: Request, res: Response) => {
   const parsed = Schema.safeParse(req.body)
   if (!parsed.success) { res.status(422).json({ errors: parsed.error.flatten().fieldErrors }); return }
   const t = await prisma.temoignage.create({ data: parsed.data })
@@ -39,7 +39,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // PATCH — admin
-router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.patch('/:id', authMiddleware, requirePermission('temoignages', 'edit'), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id)
   const parsed = Schema.partial().safeParse(req.body)
   if (!parsed.success) { res.status(422).json({ errors: parsed.error.flatten().fieldErrors }); return }
@@ -48,7 +48,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // DELETE — admin
-router.delete('/:id', authMiddleware, requireAdmin, async (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware, requirePermission('temoignages', 'edit'), async (req: Request, res: Response) => {
   await prisma.temoignage.delete({ where: { id: parseInt(req.params.id) } })
   res.json({ message: 'Supprimé.' })
 })

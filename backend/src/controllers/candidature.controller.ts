@@ -6,6 +6,7 @@ import { AuthRequest } from '../middlewares/auth.middleware'
 import { CandidatureSchema, UpdateCandidatureSchema } from '../schemas/candidature.schema'
 import { sendCandidatureAdminMail, sendStatutUpdateMail, sendCandidatureAfficheMail } from '../services/mail.service'
 import { createNotification } from '../services/notification.service'
+import { cleanupUploadedFiles } from '../middlewares/upload.middleware'
 
 const POSTE_LABELS: Record<string, string> = {
   femme_menage: 'Femme de ménage', nounou: 'Nounou', cuisinier: 'Cuisinier(ère)',
@@ -19,12 +20,41 @@ const STATUT_LABELS: Record<string, string> = {
 const prisma = new PrismaClient()
 const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
 
+// Ajoute automatiquement l'email d'un candidat/client à la newsletter s'il n'y est pas déjà
+// (ne réactive pas un désabonnement explicite existant).
+async function autoSubscribeNewsletter(email: string | null | undefined, nom: string) {
+  if (!email) return
+  try {
+    const existing = await prisma.newsletterSubscriber.findUnique({ where: { email } })
+    if (!existing) {
+      await prisma.newsletterSubscriber.create({ data: { email, nom } })
+    }
+  } catch (err) {
+    console.error('Auto-inscription newsletter échouée :', err)
+  }
+}
+
 export async function createCandidature(req: AuthRequest, res: Response) {
+  try {
+    await createCandidatureInner(req, res)
+  } catch (err) {
+    // Express 4 n'attrape pas les erreurs async : sans ce catch la requête resterait
+    // sans réponse (le candidat attend puis voit une erreur de délai dépassé).
+    console.error('Création de candidature échouée :', err)
+    cleanupUploadedFiles(req)
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Une erreur technique a empêché l'envoi de votre candidature. Merci de réessayer dans quelques minutes." })
+    }
+  }
+}
+
+async function createCandidatureInner(req: AuthRequest, res: Response) {
   // Le formulaire public peut être fermé depuis l'admin (SiteContent "candidatures_ouvertes").
   // Un admin authentifié (création manuelle) n'est jamais bloqué par ce réglage.
   if (!req.user) {
     const toggle = await prisma.siteContent.findUnique({ where: { cle: 'candidatures_ouvertes' } })
     if (toggle?.valeur === 'false') {
+      cleanupUploadedFiles(req)
       res.status(403).json({ message: 'Les candidatures sont temporairement fermées. Merci de réessayer plus tard.' })
       return
     }
@@ -32,6 +62,7 @@ export async function createCandidature(req: AuthRequest, res: Response) {
 
   const parsed = CandidatureSchema.safeParse(req.body)
   if (!parsed.success) {
+    cleanupUploadedFiles(req)
     res.status(422).json({
       message: 'Données invalides.',
       errors: parsed.error.errors.map((e) => ({ field: e.path.join('.'), message: e.message })),
@@ -50,6 +81,7 @@ export async function createCandidature(req: AuthRequest, res: Response) {
     missing.push({ field: 'permis', message: 'Le permis de conduire est requis pour le poste de chauffeur.' })
   }
   if (missing.length > 0) {
+    cleanupUploadedFiles(req)
     res.status(422).json({ message: 'Documents manquants.', errors: missing })
     return
   }
@@ -101,19 +133,18 @@ export async function createCandidature(req: AuthRequest, res: Response) {
     }
   }
 
-  try {
-    await sendCandidatureAdminMail({
-      id: candidature.id,
-      nomComplet: candidature.nomComplet,
-      telephone: candidature.telephone,
-      email: candidature.email,
-      ville: candidature.ville,
-      posteSouhaite: candidature.posteSouhaite,
-      experience: candidature.experience,
-    })
-  } catch (err) {
-    console.error('Email admin candidature non envoyé :', err)
-  }
+  // Non bloquant : un serveur SMTP lent ne doit pas retarder la réponse au candidat.
+  sendCandidatureAdminMail({
+    id: candidature.id,
+    nomComplet: candidature.nomComplet,
+    telephone: candidature.telephone,
+    email: candidature.email,
+    ville: candidature.ville,
+    posteSouhaite: candidature.posteSouhaite,
+    experience: candidature.experience,
+  }).catch((err) => console.error('Email admin candidature non envoyé :', err))
+
+  autoSubscribeNewsletter(candidature.email, candidature.nomComplet).catch(() => {})
 
   createNotification({
     type: 'candidature',

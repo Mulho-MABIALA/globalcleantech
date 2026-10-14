@@ -163,4 +163,45 @@ router.get('/actualites', async (_req: Request, res: Response) => {
   }
 })
 
+// ── Espaces publicitaires ────────────────────────────────────────────────────
+
+// GET /api/public/publicites?emplacement=accueil|popup|global
+// Ne renvoie que les pubs actives dont la période de diffusion est en cours.
+router.get('/publicites', async (req: Request, res: Response) => {
+  const emplacement = req.query.emplacement as string | undefined
+  if (emplacement && !['accueil', 'popup', 'global'].includes(emplacement)) {
+    res.status(400).json({ message: 'Emplacement invalide.' }); return
+  }
+  const now = new Date()
+  try {
+    const items = await prisma.publicite.findMany({
+      where: {
+        actif: true,
+        ...(emplacement ? { emplacement: emplacement as 'accueil' | 'popup' | 'global' } : {}),
+        AND: [
+          { OR: [{ dateDebut: null }, { dateDebut: { lte: now } }] },
+          { OR: [{ dateFin: null }, { dateFin: { gte: now } }] },
+        ],
+      },
+      orderBy: [{ ordre: 'asc' }, { createdAt: 'desc' }],
+      select: {
+        id: true, titre: true, description: true, annonceur: true, imagePath: true,
+        lien: true, texteBouton: true, emplacement: true,
+      },
+    })
+    res.json(items)
+  } catch {
+    res.json([])
+  }
+})
+
+// POST /api/public/publicites/:id/vue  et  /clic — compteurs de performance
+router.post('/publicites/:id/:type(vue|clic)', async (req: Request, res: Response) => {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) { res.status(400).end(); return }
+  const field = req.params.type === 'vue' ? 'vues' : 'clics'
+  await prisma.publicite.updateMany({ where: { id, actif: true }, data: { [field]: { increment: 1 } } }).catch(() => {})
+  res.status(204).end()
+})
+
 export default router

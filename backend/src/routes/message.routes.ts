@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
-import { authMiddleware, requireAdmin } from '../middlewares/auth.middleware'
+import { authMiddleware, requirePermission } from '../middlewares/auth.middleware'
 import { sendMessageAdminMail } from '../services/mail.service'
 import { createNotification } from '../services/notification.service'
 
@@ -36,7 +36,7 @@ router.post('/', async (req: Request, res: Response) => {
 })
 
 // GET /api/messages — admin
-router.get('/', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, requirePermission('messages', 'read'), async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 20
   const statut = req.query.statut as string | undefined
@@ -58,13 +58,13 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // GET /api/messages/stats — non lus
-router.get('/stats', authMiddleware, async (_req: Request, res: Response) => {
+router.get('/stats', authMiddleware, requirePermission('messages', 'read'), async (_req: Request, res: Response) => {
   const nonLus = await prisma.message.count({ where: { statut: 'non_lu' } })
   res.json({ nonLus })
 })
 
 // GET /api/messages/:id — admin
-router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware, requirePermission('messages', 'read'), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id)
   const msg = await prisma.message.findUnique({ where: { id } })
   if (!msg) { res.status(404).json({ message: 'Message introuvable.' }); return }
@@ -74,7 +74,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // PATCH /api/messages/:id — admin
-router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.patch('/:id', authMiddleware, requirePermission('messages', 'edit'), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id)
   const { statut, noteAdmin } = req.body
   const msg = await prisma.message.update({ where: { id }, data: { statut, noteAdmin } })
@@ -82,7 +82,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // DELETE /api/messages/:id — admin
-router.delete('/:id', authMiddleware, requireAdmin, async (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware, requirePermission('messages', 'edit'), async (req: Request, res: Response) => {
   await prisma.message.delete({ where: { id: parseInt(req.params.id) } })
   res.json({ message: 'Supprimé.' })
 })

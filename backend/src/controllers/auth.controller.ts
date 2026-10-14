@@ -12,7 +12,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
 
-const USER_SELECT = { id: true, name: true, email: true, role: true, avatarPath: true, createdAt: true, updatedAt: true }
+const USER_SELECT = { id: true, name: true, email: true, role: true, permissions: true, avatarPath: true, createdAt: true, updatedAt: true }
 
 function deleteAvatarFile(avatarPath: string) {
   const file = path.resolve(UPLOAD_DIR, avatarPath)

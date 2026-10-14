@@ -4,6 +4,32 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../../services/api'
 import { POSTE_LABELS, EXPERIENCE_LABELS, PosteSouhaite, Experience } from '../../types/candidature'
+import { compressImage } from '../../utils/compressImage'
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+const FILE_RULES: Record<'cv' | 'photo' | 'cniRecto' | 'cniVerso' | 'permis', { label: string; ext: RegExp; formats: string }> = {
+  cv: { label: 'Le CV', ext: /\.(pdf|docx?|jpe?g|png|webp)$/i, formats: 'PDF, Word ou photo (JPG, PNG)' },
+  photo: { label: 'La photo de profil', ext: /\.(jpe?g|png|webp)$/i, formats: 'JPG ou PNG' },
+  cniRecto: { label: "Le recto de la pièce d'identité", ext: /\.(jpe?g|png|webp|pdf)$/i, formats: 'JPG, PNG ou PDF' },
+  cniVerso: { label: "Le verso de la pièce d'identité", ext: /\.(jpe?g|png|webp|pdf)$/i, formats: 'JPG, PNG ou PDF' },
+  permis: { label: 'Le permis de conduire', ext: /\.(jpe?g|png|webp|pdf)$/i, formats: 'JPG, PNG ou PDF' },
+}
+
+type ApiError = {
+  code?: string
+  response?: { status?: number; data?: { message?: string; errors?: { message: string }[] } }
+}
+
+function messageErreur(e: ApiError): string {
+  if (!e.response) {
+    if (e.code === 'ECONNABORTED') return "L'envoi a pris trop de temps (connexion lente). Rapprochez-vous d'une meilleure connexion (Wi-Fi) puis réessayez."
+    return 'Connexion impossible. Vérifiez votre connexion internet puis réessayez.'
+  }
+  if (e.response.status === 413) return 'Vos fichiers sont trop lourds. Utilisez des photos moins lourdes ou un CV plus léger (5 Mo maximum par fichier).'
+  const d = e.response.data
+  if (d?.errors?.length) return d.errors.map(x => x.message).join(' ')
+  return d?.message ?? 'Une erreur est survenue. Veuillez réessayer.'
+}
 
 interface FormData {
   nomComplet: string
@@ -44,6 +70,7 @@ export default function PostulerPage() {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [progress, setProgress] = useState<number | null>(null)
 
   const {
     register, handleSubmit, watch, trigger,
@@ -61,7 +88,7 @@ export default function PostulerPage() {
   const goNext = async () => {
     const fields: (keyof FormData)[] = step === 1
       ? ['nomComplet', 'dateNaissance', 'telephone', 'ville', 'posteSouhaite']
-      : ['experience', 'disponibilite', 'accepteConditions']
+      : ['experience', 'disponibilite']
     const ok = await trigger(fields)
     if (ok) setStep(s => (s + 1) as Step)
   }
@@ -69,7 +96,27 @@ export default function PostulerPage() {
   const onSubmit = async (data: FormData) => {
     setLoading(true)
     setError('')
+    setProgress(null)
     try {
+      // 1. Préparation des fichiers : compression des photos + vérifications avant envoi
+      const prepared: Partial<Record<keyof typeof FILE_RULES, File>> = {}
+      for (const key of Object.keys(FILE_RULES) as (keyof typeof FILE_RULES)[]) {
+        const original = data[key]?.[0]
+        if (!original) continue
+        if (key === 'permis' && data.posteSouhaite !== 'chauffeur') continue
+        const file = await compressImage(original)
+        const rule = FILE_RULES[key]
+        if (!rule.ext.test(file.name)) {
+          setError(`${rule.label} doit être au format ${rule.formats}. Les photos .HEIC d'iPhone ne sont pas acceptées : faites une capture d'écran de la photo puis envoyez-la.`)
+          return
+        }
+        if (file.size > MAX_FILE_SIZE) {
+          setError(`Fichier trop lourd : ${rule.label.charAt(0).toLowerCase() + rule.label.slice(1)} fait ${(file.size / 1024 / 1024).toFixed(1)} Mo (maximum 5 Mo).`)
+          return
+        }
+        prepared[key] = file
+      }
+
       const fd = new FormData()
       fd.append('nomComplet', data.nomComplet)
       fd.append('dateNaissance', data.dateNaissance)
@@ -82,18 +129,21 @@ export default function PostulerPage() {
       fd.append('disponibilite', data.disponibilite)
       if (data.dateDisponibilite) fd.append('dateDisponibilite', data.dateDisponibilite)
       fd.append('accepteConditions', String(data.accepteConditions))
-      if (data.cv?.[0]) fd.append('cv', data.cv[0])
-      if (data.photo?.[0]) fd.append('photo', data.photo[0])
-      if (data.cniRecto?.[0]) fd.append('cniRecto', data.cniRecto[0])
-      if (data.cniVerso?.[0]) fd.append('cniVerso', data.cniVerso[0])
-      if (data.permis?.[0]) fd.append('permis', data.permis[0])
-      await api.post('/candidatures', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      for (const [key, file] of Object.entries(prepared)) fd.append(key, file)
+
+      // 2. Envoi : délai long (connexions mobiles lentes) + suivi de progression
+      setProgress(0)
+      await api.post('/candidatures', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 5 * 60 * 1000,
+        onUploadProgress: ev => { if (ev.total) setProgress(Math.round((ev.loaded / ev.total) * 100)) },
+      })
       setSubmitted(true)
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } }
-      setError(err.response?.data?.message ?? 'Une erreur est survenue. Veuillez réessayer.')
+      setError(messageErreur(e as ApiError))
     } finally {
       setLoading(false)
+      setProgress(null)
     }
   }
 
@@ -378,14 +428,14 @@ export default function PostulerPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="form-label">Photo de profil <span className="text-red-500">*</span> <span className="text-gray-400 font-normal">(max 2 Mo)</span></label>
+                  <label className="form-label">Photo de profil <span className="text-red-500">*</span></label>
                   <label className={`flex flex-col items-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer hover:border-primary hover:bg-primary/5 transition-all group ${errors.photo ? 'border-red-400' : 'border-gray-300'}`}>
                     <svg className="w-8 h-8 text-gray-400 group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M13.5 10.5V6.75a.75.75 0 00-.75-.75H4.5A.75.75 0 003.75 6.75v10.5a.75.75 0 00.75.75h10.5a.75.75 0 00.75-.75V10.5M13.5 10.5H9.75" />
                     </svg>
                     <div className="text-center">
                       <p className="text-sm font-medium text-dark">{watch('photo')?.[0]?.name ?? 'Choisir une photo'}</p>
-                      <p className="text-xs text-muted mt-0.5">JPG, PNG · max 2 Mo</p>
+                      <p className="text-xs text-muted mt-0.5">JPG, PNG · photo du téléphone acceptée</p>
                     </div>
                     <input type="file" accept="image/*" className="sr-only" {...register('photo', { required: 'La photo de profil est requise' })} />
                   </label>
@@ -400,9 +450,9 @@ export default function PostulerPage() {
                     </svg>
                     <div className="text-center">
                       <p className="text-sm font-medium text-dark">{watch('cv')?.[0]?.name ?? 'Choisir un CV'}</p>
-                      <p className="text-xs text-muted mt-0.5">PDF, Word · max 5 Mo</p>
+                      <p className="text-xs text-muted mt-0.5">PDF, Word ou photo · max 5 Mo</p>
                     </div>
-                    <input type="file" accept=".pdf,.doc,.docx" className="sr-only" {...register('cv', { required: 'Le CV est requis' })} />
+                    <input type="file" accept=".pdf,.doc,.docx,image/*" className="sr-only" {...register('cv', { required: 'Le CV est requis' })} />
                   </label>
                   {errors.cv && <p className="text-red-500 text-xs mt-1">{errors.cv.message}</p>}
                 </div>
@@ -444,7 +494,7 @@ export default function PostulerPage() {
                   {loading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Envoi en cours...
+                      {progress === null ? 'Préparation des fichiers…' : progress < 100 ? `Envoi… ${progress} %` : 'Finalisation…'}
                     </>
                   ) : (
                     <>

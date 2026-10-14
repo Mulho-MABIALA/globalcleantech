@@ -1,11 +1,15 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
+import path from 'path'
+import fs from 'fs'
 import { getStats } from '../controllers/dashboard.controller'
-import { authMiddleware } from '../middlewares/auth.middleware'
+import { authMiddleware, requirePermission } from '../middlewares/auth.middleware'
 import { mailConfigured, sendNewsletterMail } from '../services/mail.service'
+import { uploadSiteImage } from '../middlewares/upload.middleware'
 
 const router = Router()
 const prisma = new PrismaClient()
+const UPLOAD_DIR = process.env.UPLOAD_DIR || 'uploads'
 
 router.use(authMiddleware)
 router.get('/stats', getStats)
@@ -91,7 +95,7 @@ router.get('/rapport-mensuel/csv', async (req: Request, res: Response) => {
 // ── Newsletter admin ──────────────────────────────────────────────────────────
 
 // GET /api/dashboard/newsletter — liste des abonnés
-router.get('/newsletter', async (req: Request, res: Response) => {
+router.get('/newsletter', requirePermission('newsletter', 'read'), async (req: Request, res: Response) => {
   const page = Math.max(1, Number(req.query.page) || 1)
   const limit = Number(req.query.limit) || 25
   const actif = req.query.actif === 'false' ? false : true
@@ -109,8 +113,38 @@ router.get('/newsletter', async (req: Request, res: Response) => {
   res.json({ data, meta: { total, page, pages: Math.ceil(total / limit) } })
 })
 
+// POST /api/dashboard/newsletter/import-contacts — ajoute les emails des candidatures
+// et demandes existantes qui ne sont pas encore dans la liste des abonnés (idempotent).
+router.post('/newsletter/import-contacts', requirePermission('newsletter', 'edit'), async (_req: Request, res: Response) => {
+  const [candidatures, demandes, existants] = await Promise.all([
+    prisma.candidature.findMany({ where: { email: { not: null } }, select: { email: true, nomComplet: true } }),
+    prisma.demande.findMany({ select: { email: true, nomRaisonSociale: true } }),
+    prisma.newsletterSubscriber.findMany({ select: { email: true } }),
+  ])
+  const dejaAbonnes = new Set(existants.map(e => e.email))
+  const candidats: { email: string; nom: string }[] = candidatures
+    .filter((c): c is { email: string; nomComplet: string } => !!c.email)
+    .map(c => ({ email: c.email, nom: c.nomComplet }))
+  const clients = demandes
+    .filter((d) => !!d.email)
+    .map(d => ({ email: d.email, nom: d.nomRaisonSociale }))
+
+  const aAjouter = new Map<string, string>()
+  for (const c of [...candidats, ...clients]) {
+    if (!dejaAbonnes.has(c.email) && !aAjouter.has(c.email)) aAjouter.set(c.email, c.nom)
+  }
+
+  let ajoutes = 0
+  for (const [email, nom] of aAjouter) {
+    await prisma.newsletterSubscriber.create({ data: { email, nom } }).catch(() => {})
+    ajoutes++
+  }
+
+  res.json({ ajoutes, total: dejaAbonnes.size + ajoutes })
+})
+
 // PATCH /api/dashboard/newsletter/:id — activer/désactiver
-router.patch('/newsletter/:id', async (req: Request, res: Response) => {
+router.patch('/newsletter/:id', requirePermission('newsletter', 'edit'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   const { actif } = req.body as { actif: boolean }
   const updated = await prisma.newsletterSubscriber.update({ where: { id }, data: { actif } })
@@ -118,14 +152,14 @@ router.patch('/newsletter/:id', async (req: Request, res: Response) => {
 })
 
 // DELETE /api/dashboard/newsletter/:id
-router.delete('/newsletter/:id', async (req: Request, res: Response) => {
+router.delete('/newsletter/:id', requirePermission('newsletter', 'edit'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   await prisma.newsletterSubscriber.delete({ where: { id } })
   res.json({ message: 'Supprimé.' })
 })
 
 // GET /api/dashboard/newsletter/export — CSV export
-router.get('/newsletter/export', async (_req: Request, res: Response) => {
+router.get('/newsletter/export', requirePermission('newsletter', 'read'), async (_req: Request, res: Response) => {
   const subs = await prisma.newsletterSubscriber.findMany({
     where: { actif: true },
     orderBy: { createdAt: 'desc' },
@@ -141,7 +175,7 @@ router.get('/newsletter/export', async (_req: Request, res: Response) => {
 })
 
 // POST /api/dashboard/newsletter/send — envoyer une newsletter à tous les abonnés actifs
-router.post('/newsletter/send', async (req: Request, res: Response) => {
+router.post('/newsletter/send', requirePermission('newsletter', 'edit'), async (req: Request, res: Response) => {
   const { sujet, contenu } = req.body as { sujet?: string; contenu?: string }
   if (!sujet?.trim() || !contenu?.trim()) {
     res.status(400).json({ message: 'Sujet et contenu requis.' })
@@ -184,37 +218,37 @@ router.post('/newsletter/send', async (req: Request, res: Response) => {
 
 // ── Actualités ───────────────────────────────────────────────────────────────
 
-router.get('/actualites', async (_req: Request, res: Response) => {
+router.get('/actualites', requirePermission('actualites', 'read'), async (_req: Request, res: Response) => {
   const items = await prisma.actualite.findMany({ orderBy: { ordre: 'asc' } })
   res.json(items)
 })
 
-router.post('/actualites', async (req: Request, res: Response) => {
+router.post('/actualites', requirePermission('actualites', 'edit'), async (req: Request, res: Response) => {
   const { titre, description, categorie, couleur, icone, lien, ordre } = req.body
   const item = await prisma.actualite.create({ data: { titre, description, categorie, couleur: couleur ?? 'emerald', icone: icone ?? 'star', lien: lien ?? null, ordre: ordre ?? 0 } })
   res.status(201).json(item)
 })
 
-router.put('/actualites/:id', async (req: Request, res: Response) => {
+router.put('/actualites/:id', requirePermission('actualites', 'edit'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   const { titre, description, categorie, couleur, icone, lien, ordre, actif } = req.body
   const item = await prisma.actualite.update({ where: { id }, data: { titre, description, categorie, couleur, icone, lien, ordre, actif } })
   res.json(item)
 })
 
-router.delete('/actualites/:id', async (req: Request, res: Response) => {
+router.delete('/actualites/:id', requirePermission('actualites', 'edit'), async (req: Request, res: Response) => {
   await prisma.actualite.delete({ where: { id: Number(req.params.id) } })
   res.json({ message: 'Supprimé.' })
 })
 
 // ── Services ─────────────────────────────────────────────────────────────────
 
-router.get('/services', async (_req: Request, res: Response) => {
+router.get('/services', requirePermission('services', 'read'), async (_req: Request, res: Response) => {
   const services = await prisma.service.findMany({ orderBy: { ordre: 'asc' } })
   res.json(services)
 })
 
-router.post('/services', async (req: Request, res: Response) => {
+router.post('/services', requirePermission('services', 'edit'), async (req: Request, res: Response) => {
   const { titre, description, emoji, couleur, tags, ordre } = req.body
   const service = await prisma.service.create({
     data: { titre, description, emoji: emoji || '⭐', couleur: couleur || 'emerald', tags: tags || '', ordre: ordre ?? 0 },
@@ -222,7 +256,7 @@ router.post('/services', async (req: Request, res: Response) => {
   res.status(201).json(service)
 })
 
-router.put('/services/:id', async (req: Request, res: Response) => {
+router.put('/services/:id', requirePermission('services', 'edit'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   const { titre, description, emoji, couleur, tags, ordre, actif } = req.body
   const service = await prisma.service.update({
@@ -232,7 +266,7 @@ router.put('/services/:id', async (req: Request, res: Response) => {
   res.json(service)
 })
 
-router.delete('/services/:id', async (req: Request, res: Response) => {
+router.delete('/services/:id', requirePermission('services', 'edit'), async (req: Request, res: Response) => {
   const id = Number(req.params.id)
   await prisma.service.delete({ where: { id } })
   res.json({ message: 'Supprimé.' })
@@ -241,13 +275,13 @@ router.delete('/services/:id', async (req: Request, res: Response) => {
 // ── Contenu de site (À propos, etc.) ─────────────────────────────────────────
 
 // GET /api/dashboard/content — tous les blocs de contenu
-router.get('/content', async (_req: Request, res: Response) => {
+router.get('/content', requirePermission('contenu', 'read'), async (_req: Request, res: Response) => {
   const contents = await prisma.siteContent.findMany({ orderBy: { cle: 'asc' } })
   res.json(contents)
 })
 
 // PUT /api/dashboard/content/:cle — créer ou mettre à jour un bloc
-router.put('/content/:cle', async (req: Request, res: Response) => {
+router.put('/content/:cle', requirePermission('contenu', 'edit'), async (req: Request, res: Response) => {
   const { cle } = req.params
   const { valeur } = req.body as { valeur: string }
   if (typeof valeur !== 'string') {
@@ -259,6 +293,32 @@ router.put('/content/:cle', async (req: Request, res: Response) => {
     update: { valeur },
     create: { cle, valeur },
   })
+  res.json(content)
+})
+
+// POST /api/dashboard/content/about-photo — remplace la photo de la page À propos
+router.post('/content/about-photo', requirePermission('contenu', 'edit'), uploadSiteImage, async (req: Request, res: Response) => {
+  if (!req.file) {
+    res.status(400).json({ message: 'Aucune image reçue.' })
+    return
+  }
+
+  const previous = await prisma.siteContent.findUnique({ where: { cle: 'about_photo' } })
+
+  const content = await prisma.siteContent.upsert({
+    where: { cle: 'about_photo' },
+    update: { valeur: req.file.filename },
+    create: { cle: 'about_photo', valeur: req.file.filename },
+  })
+
+  if (previous?.valeur) {
+    const oldFile = path.resolve(UPLOAD_DIR, 'site', previous.valeur)
+    const siteDir = path.resolve(UPLOAD_DIR, 'site')
+    if (oldFile.startsWith(siteDir + path.sep) && fs.existsSync(oldFile)) {
+      try { fs.unlinkSync(oldFile) } catch { /* pas bloquant */ }
+    }
+  }
+
   res.json(content)
 })
 

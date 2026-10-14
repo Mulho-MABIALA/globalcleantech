@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
-import { authMiddleware } from '../middlewares/auth.middleware'
+import { authMiddleware, requirePermission } from '../middlewares/auth.middleware'
 import { sendStatutUpdateMail, sendDemandeStatutUpdateMail } from '../services/mail.service'
 import { createNotification } from '../services/notification.service'
 
@@ -31,7 +31,7 @@ const CreateSchema = z.object({
 })
 
 // GET /api/placements
-router.get('/', authMiddleware, async (req: Request, res: Response) => {
+router.get('/', authMiddleware, requirePermission('placements', 'read'), async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 20
   const search = req.query.search as string | undefined
@@ -62,7 +62,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // GET /api/placements/:id
-router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware, requirePermission('placements', 'read'), async (req: Request, res: Response) => {
   const p = await prisma.placement.findUnique({
     where: { id: parseInt(req.params.id) },
     include: {
@@ -75,7 +75,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // POST /api/placements
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, requirePermission('placements', 'edit'), async (req: Request, res: Response) => {
   const parsed = CreateSchema.safeParse(req.body)
   if (!parsed.success) { res.status(422).json({ errors: parsed.error.flatten().fieldErrors }); return }
 
@@ -144,7 +144,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // PATCH /api/placements/:id
-router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.patch('/:id', authMiddleware, requirePermission('placements', 'edit'), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id)
   const { dateDebut, dateFin, salaire, notes, demandeId } = req.body
   const p = await prisma.placement.update({
@@ -165,7 +165,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // DELETE /api/placements/:id
-router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware, requirePermission('placements', 'edit'), async (req: Request, res: Response) => {
   const id = parseInt(req.params.id)
   const existing = await prisma.placement.findUnique({ where: { id } })
   if (!existing) { res.status(404).json({ message: 'Placement introuvable.' }); return }
@@ -198,7 +198,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 })
 
 // GET /api/placements/candidature/:candidatureId
-router.get('/candidature/:candidatureId', authMiddleware, async (req: Request, res: Response) => {
+router.get('/candidature/:candidatureId', authMiddleware, requirePermission('placements', 'read'), async (req: Request, res: Response) => {
   const data = await prisma.placement.findMany({
     where: { candidatureId: parseInt(req.params.candidatureId) },
     include: { demande: { select: { id: true, nomRaisonSociale: true, email: true, telephone: true } } },

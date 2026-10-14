@@ -15,6 +15,7 @@ import userRoutes from './routes/user.routes'
 import placementRoutes from './routes/placement.routes'
 import searchRoutes from './routes/search.routes'
 import notificationRoutes from './routes/notification.routes'
+import publiciteRoutes from './routes/publicite.routes'
 import { authMiddleware } from './middlewares/auth.middleware'
 import { startCronJobs } from './cron/reminders'
 
@@ -56,6 +57,11 @@ app.use('/api/users', userRoutes)
 app.use('/api/placements', placementRoutes)
 app.use('/api/search', searchRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/publicites', publiciteRoutes)
+
+// Images du site public (photo de la page À propos, etc.) : pas d'authentification,
+// car affichées sur des pages publiques. Dossier dédié, séparé des documents privés.
+app.use('/api/public/site-images', express.static(path.join(UPLOAD_DIR, 'site')))
 
 // Wildcard : les fichiers peuvent être dans des sous-dossiers (ex: candidatures/4/xxx.pdf)
 app.get('/api/uploads/*', authMiddleware, (req: Request, res: Response) => {

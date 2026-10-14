@@ -62,6 +62,15 @@ export default function Newsletter() {
     }
   }
 
+  const importMut = useMutation({
+    mutationFn: () => api.post('/dashboard/newsletter/import-contacts').then(r => r.data as { ajoutes: number; total: number }),
+    onSuccess: ({ ajoutes }) => {
+      qc.invalidateQueries({ queryKey: ['newsletter'] })
+      toast.success(ajoutes > 0 ? `${ajoutes} email(s) importé(s) depuis les candidatures/demandes.` : 'Tous les emails étaient déjà présents.')
+    },
+    onError: () => toast.error("Échec de l'import."),
+  })
+
   const exportCsv = () => {
     api.get('/dashboard/newsletter/export', { responseType: 'blob' }).then(res => {
       const url = URL.createObjectURL(new Blob([res.data]))
@@ -83,6 +92,14 @@ export default function Newsletter() {
             className={`text-sm px-3 py-2 rounded-lg border transition-colors ${showInactif ? 'border-primary text-primary bg-primary/5' : 'border-gray-200 text-muted hover:border-gray-300'}`}
           >
             {showInactif ? 'Afficher actifs' : 'Afficher désinscrits'}
+          </button>
+          <button
+            onClick={() => importMut.mutate()}
+            disabled={importMut.isPending}
+            className="btn-outline text-sm py-2 disabled:opacity-50"
+            title="Ajoute les emails des candidatures et demandes clients déjà en base"
+          >
+            {importMut.isPending ? 'Import...' : 'Importer candidats & clients'}
           </button>
           <button onClick={exportCsv} className="btn-outline text-sm py-2">
             Export CSV
